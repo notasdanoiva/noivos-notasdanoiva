@@ -1,0 +1,1640 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Site do Casal · Notas da Noiva</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&family=Raleway:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    /* ─── RESET & BASE ─── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #FFFFFF;
+      --bg2: #F7F7F7;
+      --bg3: #EFEFEF;
+      --border: #E4E4E4;
+      --border2: #C8C8C8;
+      --text: #1A1A1A;
+      --muted: #888;
+      --silver: #B0B0B0;
+      --accent: #1A1A1A;
+      --danger: #C84040;
+      --green: #4A7A4A;
+      --red: #9B4444;
+      --font-display: 'Playfair Display', serif;
+      --font-body: 'Raleway', sans-serif;
+    }
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 300;
+      min-height: 100vh;
+    }
+    input, select, textarea, button { font-family: var(--font-body); }
+
+    /* ─── LOADING ─── */
+    #loading {
+      position: fixed; inset: 0; background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 999; flex-direction: column; gap: 16px;
+    }
+    #loading .logo {
+      font-family: var(--font-display); font-size: 22px; font-style: italic;
+      color: var(--text); letter-spacing: .02em;
+    }
+    #loading .spinner {
+      width: 24px; height: 24px; border: 1.5px solid var(--border);
+      border-top-color: var(--text); border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── AUTH SCREEN ─── */
+    #authScreen {
+      display: none; min-height: 100vh; align-items: center;
+      justify-content: center; padding: 24px;
+      background: linear-gradient(160deg, #F6F4F9 0%, #EDEAF4 50%, #F6F4F9 100%);
+      position: relative; overflow: hidden;
+    }
+    #authScreen::before {
+      content: ''; position: absolute; width: 320px; height: 320px;
+      background: radial-gradient(circle, rgba(160,120,200,.12) 0%, transparent 70%);
+      top: -80px; right: -80px; pointer-events: none;
+    }
+    #authScreen::after {
+      content: ''; position: absolute; width: 240px; height: 240px;
+      background: radial-gradient(circle, rgba(92,79,122,.08) 0%, transparent 70%);
+      bottom: -60px; left: -60px; pointer-events: none;
+    }
+    .auth-box {
+      width: 100%; max-width: 360px; text-align: center;
+      background: rgba(255,255,255,.85); backdrop-filter: blur(16px);
+      border: 1px solid rgba(226,222,235,.8); border-radius: 6px;
+      padding: 40px 36px; position: relative; z-index: 1;
+      box-shadow: 0 8px 40px rgba(61,50,84,.06);
+    }
+    .auth-logo { width: 130px; height: auto; margin: 0 auto 8px; display: block; }
+    .auth-box .brand {
+      font-family: var(--font-display); font-size: 22px; font-style: italic;
+      color: #3D3254; margin-bottom: 4px;
+    }
+    .auth-box .sub {
+      font-size: 10px; letter-spacing: .18em; text-transform: uppercase;
+      color: #9B93B0; margin-bottom: 28px;
+    }
+    .auth-tabs {
+      display: flex; border: 1px solid #E2DEEB; border-radius: 3px;
+      overflow: hidden; margin-bottom: 24px;
+    }
+    .auth-tab {
+      flex: 1; padding: 10px; font-size: 10px; letter-spacing: .15em;
+      text-transform: uppercase; background: none; border: none; cursor: pointer;
+      color: #9B93B0; font-family: var(--font-body); transition: all .2s;
+    }
+    .auth-tab.active { background: #5C4F7A; color: white; }
+    .auth-box .form-group { margin-bottom: 14px; text-align: left; }
+    .auth-box label {
+      font-size: 9px; letter-spacing: .18em; text-transform: uppercase;
+      color: #9B93B0; display: block; margin-bottom: 6px;
+    }
+    .auth-box input {
+      width: 100%; border: 1px solid #E2DEEB; border-radius: 3px;
+      padding: 11px 14px; font-size: 13px; font-weight: 300;
+      outline: none; transition: border-color .2s; background: rgba(255,255,255,.9);
+      color: #3D3254;
+    }
+    .auth-box input:focus { border-color: #A090C0; }
+    .btn-primary {
+      width: 100%; background: #5C4F7A; color: white; border: none;
+      border-radius: 3px; padding: 13px; font-size: 10px; font-weight: 500;
+      letter-spacing: .18em; text-transform: uppercase; cursor: pointer;
+      transition: all .2s; font-family: var(--font-body);
+      box-shadow: 0 4px 16px rgba(92,79,122,.25);
+    }
+    .btn-primary:hover { background: #4A3D65; }
+    .auth-error {
+      font-size: 12px; color: #C84040; margin-top: 12px;
+      display: none; text-align: center; padding: 8px 12px;
+      background: #FFF0F0; border-radius: 3px; border: 1px solid #FFCCCC;
+    }
+
+    /* ─── APP ─── */
+    #app { display: none; max-width: 480px; margin: 0 auto; }
+
+    /* NAV */
+    .nav {
+      display: flex; justify-content: center; border-bottom: 1px solid var(--border);
+      background: var(--bg); position: sticky; top: 0; z-index: 20;
+    }
+    .nav-btn {
+      font-size: 10px; letter-spacing: .18em; text-transform: uppercase;
+      color: var(--silver); background: none; border: none;
+      border-bottom: 1.5px solid transparent; padding: 14px 18px;
+      cursor: pointer; transition: all .2s; font-weight: 400;
+    }
+    .nav-btn.active { color: var(--text); border-bottom-color: var(--accent); }
+
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* ─── MODO BADGE ─── */
+    .mode-badge {
+      text-align: center; padding: 8px 0;
+      font-size: 9px; letter-spacing: .18em; text-transform: uppercase;
+      background: var(--bg2); border-bottom: 1px solid var(--border);
+    }
+    .mode-badge.noiva { color: var(--accent); }
+    .mode-badge.publico { display: none; }
+
+    /* ─── PERSONALIZAÇÃO (só noiva) ─── */
+    .pers-bar {
+      border-bottom: 1px solid var(--border); padding: 12px 20px;
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    }
+    .pers-label {
+      font-size: 9px; letter-spacing: .15em; text-transform: uppercase;
+      color: var(--silver); white-space: nowrap;
+    }
+    .sep { width: 1px; height: 18px; background: var(--border); flex-shrink: 0; }
+    .palette-opts { display: flex; gap: 5px; }
+    .pal {
+      width: 18px; height: 18px; border-radius: 50%; cursor: pointer;
+      border: 2px solid transparent; transition: all .18s; flex-shrink: 0;
+    }
+    .pal.active { border-color: var(--border2); transform: scale(1.2); }
+    .font-opts { display: flex; gap: 4px; }
+    .fopt {
+      font-size: 10px; letter-spacing: .08em; background: none;
+      border: 1px solid var(--border); border-radius: 2px;
+      padding: 4px 8px; cursor: pointer; color: var(--muted); transition: all .18s;
+    }
+    .fopt.active { border-color: var(--border2); color: var(--text); }
+    .bg-btn {
+      font-size: 10px; letter-spacing: .1em; background: none;
+      border: 1px solid var(--border); border-radius: 2px; padding: 4px 10px;
+      cursor: pointer; color: var(--muted); transition: all .18s;
+      display: flex; align-items: center; gap: 5px; position: relative;
+    }
+    .bg-btn:hover { border-color: var(--border2); color: var(--text); }
+    .bg-btn input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+    /* ─── HERO ─── */
+    .hero { text-align: center; padding: 40px 24px 0; position: relative; overflow: hidden; }
+    .hero-bg {
+      position: absolute; inset: 0; background-size: cover;
+      background-position: center; opacity: 0; transition: opacity .3s;
+    }
+    .hero-content { position: relative; z-index: 1; }
+    .hero-photo {
+      width: 88px; height: 88px; border-radius: 50%; background: var(--bg3);
+      border: 1px solid var(--border); margin: 0 auto 20px; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+    }
+    .hero-photo.editable { cursor: pointer; }
+    .hero-photo img { width: 100%; height: 100%; object-fit: cover; display: none; }
+    .hero-photo .ph {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .hero-photo .ph i { font-size: 20px; color: var(--silver); }
+    .hero-photo .ph span {
+      font-size: 9px; letter-spacing: .08em; color: var(--silver); text-transform: uppercase;
+    }
+    .hero-photo input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .hero-names {
+      font-family: var(--font-display); font-size: 44px; font-weight: 400;
+      font-style: italic; line-height: 1.05; margin-bottom: 10px;
+    }
+    .hero-amp { opacity: .4; }
+    .hero-date {
+      font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
+      color: var(--silver); margin-bottom: 28px;
+    }
+    .hero-rule { width: 40px; height: 1px; background: var(--border2); margin: 0 auto 32px; }
+
+    /* ─── FORMULÁRIO DA NOIVA (configuração) ─── */
+    .noiva-form { padding: 24px; }
+    .form-section-title {
+      font-size: 9px; letter-spacing: .2em; text-transform: uppercase;
+      color: var(--silver); margin-bottom: 14px; padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .form-group { margin-bottom: 14px; }
+    .form-group label {
+      font-size: 9px; letter-spacing: .15em; text-transform: uppercase;
+      color: var(--silver); display: block; margin-bottom: 5px;
+    }
+    .form-group input, .form-group textarea {
+      width: 100%; border: 1px solid var(--border); border-radius: 2px;
+      padding: 10px 13px; font-size: 13px; font-weight: 300; outline: none;
+      transition: border-color .2s; background: var(--bg); color: var(--text);
+    }
+    .form-group input:focus, .form-group textarea:focus { border-color: var(--border2); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .form-actions { padding: 0 24px 32px; display: flex; gap: 10px; }
+    .btn-save {
+      flex: 1; background: var(--accent); color: white; border: none;
+      border-radius: 2px; padding: 13px; font-size: 10px; font-weight: 500;
+      letter-spacing: .18em; text-transform: uppercase; cursor: pointer;
+      transition: opacity .2s;
+    }
+    .btn-save:hover { opacity: .8; }
+    .btn-secondary {
+      background: none; border: 1px solid var(--border2); border-radius: 2px;
+      padding: 13px 16px; font-size: 10px; letter-spacing: .15em;
+      text-transform: uppercase; cursor: pointer; color: var(--text);
+      transition: all .2s;
+    }
+    .btn-secondary:hover { background: var(--bg2); }
+
+    /* ─── LINK PÚBLICO ─── */
+    .link-publico-box {
+      margin: 0 24px 20px; background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 2px; padding: 14px 16px; display: flex;
+      align-items: center; justify-content: space-between; gap: 10px;
+    }
+    .link-publico-box .link-url {
+      font-size: 12px; color: var(--muted); word-break: break-all; flex: 1;
+    }
+    .btn-copy-link {
+      background: none; border: 1px solid var(--border2); border-radius: 2px;
+      padding: 6px 12px; font-size: 10px; letter-spacing: .1em;
+      text-transform: uppercase; cursor: pointer; color: var(--text);
+      white-space: nowrap; transition: all .2s; flex-shrink: 0;
+    }
+    .btn-copy-link:hover { background: var(--bg3); }
+
+    /* ─── EVENTOS (visão pública) ─── */
+    .eventos { border-top: 1px solid var(--border); }
+    .evento-block { padding: 20px 24px; border-bottom: 1px solid var(--border); }
+    .evento-label {
+      font-size: 9px; letter-spacing: .2em; text-transform: uppercase;
+      color: var(--silver); margin-bottom: 12px;
+    }
+    .evento-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .evento-field .lbl {
+      font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--silver); margin-bottom: 4px;
+    }
+    .evento-field .val {
+      font-family: var(--font-display); font-size: 15px; line-height: 1.35;
+    }
+    .evento-field .val a {
+      color: var(--text); text-decoration: none; border-bottom: 1px solid var(--border2);
+    }
+    .evento-field .val a:hover { border-bottom-color: var(--text); }
+    .evento-field.full { grid-column: 1 / -1; }
+    .dress {
+      padding: 18px 24px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 14px;
+    }
+    .dress i { font-size: 17px; color: var(--silver); }
+    .dress .lbl {
+      font-size: 9px; letter-spacing: .15em; text-transform: uppercase;
+      color: var(--silver); margin-bottom: 3px;
+    }
+    .dress .val { font-size: 13px; }
+
+    /* ─── LISTA DE PRESENTES ─── */
+    .sec-header { padding: 28px 24px 16px; text-align: center; border-bottom: 1px solid var(--border); }
+    .sec-header h2 {
+      font-family: var(--font-display); font-size: 27px; font-style: italic;
+      font-weight: 400; margin-bottom: 5px;
+    }
+    .sec-header p { font-size: 12px; color: var(--muted); line-height: 1.7; max-width: 280px; margin: 0 auto; }
+    .edit-hint {
+      text-align: center; padding: 10px 24px 0;
+      font-size: 10px; color: var(--silver); letter-spacing: .04em;
+    }
+    .add-gift-wrap { padding: 14px 24px 4px; text-align: center; }
+    .btn-add-gift {
+      font-size: 10px; letter-spacing: .15em; text-transform: uppercase;
+      background: none; border: 1px solid var(--border2); border-radius: 2px;
+      padding: 8px 18px; cursor: pointer; color: var(--text);
+      display: inline-flex; align-items: center; gap: 5px; transition: all .2s;
+    }
+    .btn-add-gift:hover { background: var(--bg2); }
+
+    .gift-list {
+      padding: 10px 24px 32px; display: flex;
+      flex-direction: column; gap: 1px; background: var(--border);
+    }
+    .gift-item {
+      background: var(--bg); padding: 14px 14px 10px;
+      display: flex; gap: 12px; align-items: flex-start;
+    }
+    .gift-img {
+      width: 58px; height: 58px; border-radius: 2px; background: var(--bg3);
+      border: 1px solid var(--border); flex-shrink: 0; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+    }
+    .gift-img.editable { cursor: pointer; }
+    .gift-img img { width: 100%; height: 100%; object-fit: cover; display: none; }
+    .gift-img i { font-size: 18px; color: var(--border2); }
+    .gift-img input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .gift-body { flex: 1; min-width: 0; }
+    .gift-name {
+      font-family: var(--font-display); font-size: 16px; font-style: italic;
+      font-weight: 400; color: var(--text); margin-bottom: 2px;
+    }
+    .gift-name-edit {
+      font-family: var(--font-display); font-size: 16px; font-style: italic;
+      font-weight: 400; color: var(--text); background: none; border: none;
+      border-bottom: 1px solid transparent; width: 100%; outline: none;
+      padding: 0; transition: border-color .2s;
+    }
+    .gift-name-edit:focus { border-bottom-color: var(--border2); }
+    .gift-desc { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .gift-desc-edit {
+      font-size: 11px; color: var(--muted); background: none; border: none;
+      border-bottom: 1px solid transparent; width: 100%; outline: none;
+      padding: 2px 0; margin-top: 2px; font-weight: 300; transition: border-color .2s;
+    }
+    .gift-desc-edit:focus { border-bottom-color: var(--border2); }
+    .gift-value { font-size: 13px; color: var(--text); font-weight: 400; margin-top: 4px; }
+    .gift-value-edit {
+      font-size: 13px; color: var(--text); background: none; border: none;
+      border-bottom: 1px solid transparent; width: 100px; outline: none;
+      padding: 2px 0; margin-top: 4px; font-weight: 400; transition: border-color .2s;
+    }
+    .gift-value-edit:focus { border-bottom-color: var(--border2); }
+
+    /* Campo link cartão (só noiva) */
+    .gift-cardlink-wrap { margin-top: 8px; display: flex; align-items: center; gap: 6px; }
+    .gift-cardlink-wrap label {
+      font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--silver); white-space: nowrap;
+    }
+    .gift-cardlink-edit {
+      flex: 1; font-size: 11px; color: var(--muted); background: none;
+      border: none; border-bottom: 1px solid var(--border); outline: none;
+      padding: 2px 0; font-weight: 300; transition: border-color .2s; min-width: 0;
+    }
+    .gift-cardlink-edit:focus { border-bottom-color: var(--border2); }
+
+    .gift-btns-row {
+      display: flex; gap: 5px; margin-top: 10px;
+      align-items: center; justify-content: space-between;
+    }
+    .gift-actions { display: flex; gap: 5px; }
+    .btn-pix {
+      background: var(--accent); color: white; border: none; border-radius: 2px;
+      padding: 7px 12px; font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+      cursor: pointer; transition: opacity .2s;
+    }
+    .btn-pix:hover { opacity: .75; }
+    .btn-card {
+      background: none; color: var(--text); border: 1px solid var(--border2);
+      border-radius: 2px; padding: 7px 12px; font-size: 10px; letter-spacing: .1em;
+      text-transform: uppercase; cursor: pointer; transition: all .2s;
+    }
+    .btn-card:hover { background: var(--bg2); }
+    .btn-remove {
+      background: none; border: none; cursor: pointer; color: var(--silver);
+      font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+      padding: 4px 0; transition: color .2s; font-weight: 400;
+    }
+    .btn-remove:hover { color: var(--danger); }
+
+    /* ─── CONVIDADOS (só noiva) ─── */
+    .guests-wrap { padding: 20px 24px 32px; }
+    .guests-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .guests-header h3 {
+      font-family: var(--font-display); font-size: 18px; font-style: italic; font-weight: 400;
+    }
+    .convite-block { margin-bottom: 8px; background: var(--bg2); border: 1px solid var(--border); border-radius: 2px; overflow: hidden; }
+    .convite-header {
+      padding: 12px 16px; display: flex; align-items: center;
+      justify-content: space-between; cursor: pointer;
+    }
+    .convite-name { font-size: 12px; font-weight: 500; letter-spacing: .05em; }
+    .convite-count { font-size: 10px; color: var(--silver); }
+    .convite-pessoas { border-top: 1px solid var(--border); }
+    .pessoa-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--bg);
+    }
+    .pessoa-row:last-child { border-bottom: none; }
+    .pessoa-nome { font-size: 13px; }
+    .pessoa-status {
+      font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
+    }
+    .pessoa-status.confirmado { color: var(--green); }
+    .pessoa-status.recusado { color: var(--red); }
+    .pessoa-status.pendente { color: var(--silver); }
+
+    .add-convite-form {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 2px;
+      padding: 16px; margin-top: 12px;
+    }
+    .add-convite-form .form-group { margin-bottom: 10px; }
+    .pessoas-inputs { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+    .pessoa-input-row { display: flex; gap: 6px; align-items: center; }
+    .pessoa-input-row input { flex: 1; }
+    .btn-add-pessoa {
+      background: none; border: 1px dashed var(--border2); border-radius: 2px;
+      padding: 8px; font-size: 11px; color: var(--silver); cursor: pointer;
+      width: 100%; transition: all .2s; display: flex; align-items: center;
+      justify-content: center; gap: 5px;
+    }
+    .btn-add-pessoa:hover { border-color: var(--text); color: var(--text); }
+    .btn-rm-pessoa {
+      background: none; border: none; cursor: pointer; color: var(--silver);
+      font-size: 16px; line-height: 1; flex-shrink: 0; transition: color .2s;
+    }
+    .btn-rm-pessoa:hover { color: var(--danger); }
+
+    /* ─── PIX MODAL ─── */
+    .modal-bg {
+      position: fixed; inset: 0; background: rgba(0,0,0,.4); display: none;
+      align-items: center; justify-content: center; z-index: 100; padding: 24px;
+    }
+    .modal-bg.open { display: flex; }
+    .modal {
+      background: white; border-radius: 4px; padding: 30px 26px;
+      width: 100%; max-width: 310px; text-align: center;
+    }
+    .modal h3 {
+      font-family: var(--font-display); font-size: 20px; font-style: italic; margin-bottom: 4px;
+    }
+    .modal .sub {
+      font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--silver); margin-bottom: 22px;
+    }
+    .qr-box {
+      width: 112px; height: 112px; margin: 0 auto 14px; background: var(--bg3);
+      border: 1px solid var(--border); border-radius: 2px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .qr-box i { font-size: 52px; color: var(--border2); }
+    .pix-code {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 2px;
+      padding: 9px 11px; font-size: 9px; font-family: monospace; color: var(--muted);
+      word-break: break-all; text-align: left; margin-bottom: 12px;
+    }
+    .btn-copy {
+      width: 100%; background: var(--accent); color: white; border: none;
+      border-radius: 2px; padding: 11px; font-size: 10px; letter-spacing: .15em;
+      text-transform: uppercase; cursor: pointer; margin-bottom: 7px;
+      transition: opacity .2s; display: flex; align-items: center;
+      justify-content: center; gap: 5px;
+    }
+    .btn-copy:hover { opacity: .8; }
+    .btn-modal-close {
+      width: 100%; background: none; border: 1px solid var(--border); border-radius: 2px;
+      padding: 9px; font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--silver); cursor: pointer;
+    }
+
+    /* ─── RSVP ─── */
+    .rsvp-wrap { padding: 22px 24px 32px; }
+    .rsvp-step { display: none; }
+    .rsvp-step.active { display: block; }
+    .search-box {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 2px;
+      padding: 0 14px; display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+    }
+    .search-box i { color: var(--silver); font-size: 15px; flex-shrink: 0; }
+    .search-box input {
+      flex: 1; border: none; background: none; padding: 12px 0;
+      font-size: 14px; font-weight: 300; outline: none; color: var(--text);
+    }
+    .search-box input::placeholder { color: var(--silver); }
+    .result-list {
+      display: flex; flex-direction: column; gap: 1px; background: var(--border);
+      border: 1px solid var(--border); border-radius: 2px; overflow: hidden;
+    }
+    .result-item {
+      background: var(--bg); padding: 13px 16px; display: flex;
+      align-items: center; justify-content: space-between; cursor: pointer;
+      transition: background .15s;
+    }
+    .result-item:hover { background: var(--bg2); }
+    .result-item .r-name { font-size: 14px; font-weight: 400; }
+    .result-item .r-tag {
+      font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--silver);
+    }
+    .no-result { text-align: center; padding: 22px; font-size: 12px; color: var(--silver); }
+    .btn-back {
+      background: none; border: none; color: var(--silver); font-size: 10px;
+      letter-spacing: .12em; text-transform: uppercase; cursor: pointer;
+      margin-bottom: 16px; display: flex; align-items: center; gap: 4px;
+    }
+    .convite-card {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 2px;
+      padding: 16px; margin-bottom: 14px;
+    }
+    .convite-title {
+      font-size: 9px; letter-spacing: .18em; text-transform: uppercase;
+      color: var(--silver); margin-bottom: 12px;
+    }
+    .guest-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .guest-row:last-child { border-bottom: none; }
+    .guest-name { font-size: 13px; font-weight: 400; }
+    .guest-toggle { display: flex; gap: 4px; }
+    .tog-btn {
+      font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
+      border-radius: 2px; padding: 5px 10px; cursor: pointer;
+      border: 1px solid var(--border); background: var(--bg); color: var(--silver);
+      transition: all .18s;
+    }
+    .tog-btn.sim.active { background: #EFF5EE; border-color: #4A7A4A; color: #4A7A4A; }
+    .tog-btn.nao.active { background: #F9EEEE; border-color: #C47070; color: #9B4444; }
+    .btn-confirmar-all {
+      width: 100%; background: var(--accent); color: white; border: none;
+      border-radius: 2px; padding: 12px; font-size: 10px; letter-spacing: .18em;
+      text-transform: uppercase; cursor: pointer; transition: opacity .2s; margin-top: 6px;
+    }
+    .btn-confirmar-all:hover { opacity: .8; }
+    .success-box { text-align: center; padding: 28px 0; }
+    .check-ring {
+      width: 52px; height: 52px; border: 1px solid var(--border2); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; margin: 0 auto 18px;
+    }
+    .check-ring i { font-size: 20px; color: var(--text); }
+    .success-box h3 {
+      font-family: var(--font-display); font-size: 24px; font-style: italic;
+      font-weight: 400; margin-bottom: 8px;
+    }
+    .success-box p { font-size: 12px; color: var(--muted); line-height: 1.8; }
+    .success-list {
+      margin: 14px 0 0; background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 2px; overflow: hidden;
+    }
+    .success-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 9px 14px; border-bottom: 1px solid var(--border); font-size: 12px;
+    }
+    .success-row:last-child { border-bottom: none; }
+    .s-sim { color: var(--green); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+    .s-nao { color: var(--red); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+
+    /* ─── TOAST ─── */
+    .toast {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: var(--text); color: white; padding: 8px 18px; border-radius: 2px;
+      font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+      display: none; z-index: 200;
+    }
+    .toast.show { display: block; }
+
+    /* ─── EMPTY STATE ─── */
+    .empty-state {
+      text-align: center; padding: 48px 24px;
+      font-size: 12px; color: var(--silver); line-height: 1.8;
+    }
+    .empty-state i { font-size: 32px; color: var(--border2); display: block; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading">
+  <div class="logo">Notas da Noiva</div>
+  <div class="spinner"></div>
+</div>
+
+<!-- AUTH -->
+<div id="authScreen" style="display:none">
+  <div class="auth-box">
+    <img src="logo.png" class="auth-logo" alt="Notas da Noiva" onerror="this.style.display='none';document.getElementById('authLogoText').style.display='block'">
+    <div class="brand" id="authLogoText" style="display:none">Notas da Noiva</div>
+    <div class="sub" id="authSubtitle">Site do casal</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px">
+      <div style="flex:1;height:1px;background:#E2DEEB"></div>
+      <span style="font-size:14px;color:#C4BADB">✦</span>
+      <div style="flex:1;height:1px;background:#E2DEEB"></div>
+    </div>
+
+    <!-- TABS LOGIN / CADASTRO -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Entrar</button>
+      <button class="auth-tab" id="tabCadastro" onclick="switchAuthTab('cadastro')">Criar conta</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="formLogin">
+      <div class="form-group">
+        <label>E-mail</label>
+        <input type="email" id="authEmail" placeholder="seu@email.com">
+      </div>
+      <div class="form-group">
+        <label>Senha</label>
+        <input type="password" id="authPassword" placeholder="••••••••">
+      </div>
+      <button class="btn-primary" onclick="doLogin()">Entrar</button>
+    </div>
+
+    <!-- CADASTRO -->
+    <div id="formCadastro" style="display:none">
+      <div class="form-group">
+        <label>Seu nome</label>
+        <input type="text" id="cadNome" placeholder="Ana Silva">
+      </div>
+      <div class="form-group">
+        <label>E-mail</label>
+        <input type="email" id="cadEmail" placeholder="seu@email.com">
+      </div>
+      <div class="form-group">
+        <label>Senha</label>
+        <input type="password" id="cadSenha" placeholder="mínimo 6 caracteres">
+      </div>
+      <button class="btn-primary" onclick="doCadastro()">Criar conta gratuita</button>
+    </div>
+
+    <div class="auth-error" id="authError"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="mode-badge noiva" id="modeBadge">✦ Modo edição · visível só para você</div>
+
+  <nav class="nav">
+    <button class="nav-btn active" onclick="goTab('home')">O Casamento</button>
+    <button class="nav-btn" onclick="goTab('lista')">Presentes</button>
+    <button class="nav-btn" onclick="goTab('convidados')" id="navConvidados" style="display:none">Convidados</button>
+    <button class="nav-btn" onclick="goTab('rsvp')" id="navRsvp">Confirmação</button>
+  </nav>
+
+  <!-- ─── ABA HOME ─── -->
+  <div id="home" class="section active">
+
+    <!-- Barra personalização (só noiva) -->
+    <div class="pers-bar" id="persBar">
+      <span class="pers-label">Paleta</span>
+      <div class="palette-opts">
+        <div class="pal active" style="background:#1A1A1A" title="Clássico" onclick="setPalette('classico',this)"></div>
+        <div class="pal" style="background:#8B7355" title="Nude" onclick="setPalette('nude',this)"></div>
+        <div class="pal" style="background:#4A6741" title="Sage" onclick="setPalette('sage',this)"></div>
+        <div class="pal" style="background:#5A7080" title="Azul" onclick="setPalette('azul',this)"></div>
+        <div class="pal" style="background:#A0748A" title="Rosa" onclick="setPalette('rosa',this)"></div>
+      </div>
+      <div class="sep"></div>
+      <span class="pers-label">Fonte</span>
+      <div class="font-opts">
+        <button class="fopt active" onclick="setFont('playfair',this)" style="font-family:'Playfair Display',serif;font-style:italic">Aa</button>
+        <button class="fopt" onclick="setFont('cormorant',this)" style="font-family:'Cormorant Garamond',serif;font-style:italic">Aa</button>
+        <button class="fopt" onclick="setFont('raleway',this)">Aa</button>
+      </div>
+      <div class="sep"></div>
+      <div class="bg-btn">
+        <i class="ti ti-photo" style="font-size:13px"></i> Fundo
+        <input type="file" accept="image/*" onchange="loadBgPhoto(this)">
+      </div>
+    </div>
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="hero-bg" id="heroBg"></div>
+      <div class="hero-content">
+        <div class="hero-photo editable" id="heroPhoto" title="Foto do casal">
+          <div class="ph" id="phPh"><i class="ti ti-camera"></i><span>Foto</span></div>
+          <img id="heroImg" alt="Foto do casal">
+          <input type="file" accept="image/*" id="heroPhotoInput" onchange="loadHeroPhoto(this)" style="display:none">
+        </div>
+        <div class="hero-names" id="heroNames">— &nbsp;<span class="hero-amp">&</span>&nbsp; —</div>
+        <div class="hero-date" id="heroDate">configure seu casamento abaixo</div>
+        <div class="hero-rule"></div>
+      </div>
+    </div>
+
+    <!-- Link público (só noiva) -->
+    <div id="linkPublicoBox" class="link-publico-box" style="display:none">
+      <span class="link-url" id="linkPublicoUrl"></span>
+      <button class="btn-copy-link" onclick="copyLink()">Copiar link</button>
+    </div>
+
+    <!-- Visão pública dos eventos -->
+    <div id="eventosPublico" class="eventos" style="display:none">
+      <div class="evento-block" id="cerimPublico"></div>
+      <div class="evento-block" id="recepPublico"></div>
+      <div class="dress" id="dressPublico"></div>
+    </div>
+
+    <!-- Formulário da noiva -->
+    <div id="noivaCfg">
+      <div class="noiva-form">
+        <div class="form-section-title">O casal</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nome da noiva</label>
+            <input type="text" id="cfgNoiva" placeholder="Ana">
+          </div>
+          <div class="form-group">
+            <label>Nome do noivo</label>
+            <input type="text" id="cfgNoivo" placeholder="João">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Slug (URL do site)</label>
+          <input type="text" id="cfgSlug" placeholder="ana-e-joao">
+        </div>
+
+        <div class="form-section-title" style="margin-top:20px">Cerimônia</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Data</label>
+            <input type="date" id="cfgCerimData">
+          </div>
+          <div class="form-group">
+            <label>Horário</label>
+            <input type="text" id="cfgCerimHorario" placeholder="19h00">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Local</label>
+          <input type="text" id="cfgCerimLocal" placeholder="Igreja Nossa Senhora do Rosário">
+        </div>
+        <div class="form-group">
+          <label>Endereço</label>
+          <input type="text" id="cfgCerimEndereco" placeholder="Rua das Flores, 120 · Batel">
+        </div>
+        <div class="form-group">
+          <label>Link Google Maps</label>
+          <input type="url" id="cfgCerimMaps" placeholder="https://maps.google.com/...">
+        </div>
+
+        <div class="form-section-title" style="margin-top:20px">Recepção</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Data</label>
+            <input type="date" id="cfgRecepData">
+          </div>
+          <div class="form-group">
+            <label>Horário</label>
+            <input type="text" id="cfgRecepHorario" placeholder="21h00">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Local</label>
+          <input type="text" id="cfgRecepLocal" placeholder="Espaço Villa Curitiba">
+        </div>
+        <div class="form-group">
+          <label>Endereço</label>
+          <input type="text" id="cfgRecepEndereco" placeholder="Av. do Batel, 1400">
+        </div>
+        <div class="form-group">
+          <label>Link Google Maps</label>
+          <input type="url" id="cfgRecepMaps" placeholder="https://maps.google.com/...">
+        </div>
+
+        <div class="form-section-title" style="margin-top:20px">Extras</div>
+        <div class="form-group">
+          <label>Dress code</label>
+          <input type="text" id="cfgDress" placeholder="Esporte fino · tons neutros">
+        </div>
+
+        <div class="form-section-title" style="margin-top:20px">Pix (para lista de presentes)</div>
+        <div class="form-group">
+          <label>Chave Pix</label>
+          <input type="text" id="cfgPix" placeholder="CPF, e-mail, telefone ou chave aleatória">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nome do recebedor</label>
+            <input type="text" id="cfgPixNome" placeholder="Ana Silva">
+          </div>
+          <div class="form-group">
+            <label>Cidade</label>
+            <input type="text" id="cfgPixCidade" placeholder="Curitiba">
+          </div>
+        </div>
+        <div class="form-section-title" style="margin-top:20px">Integração Noiva Independente PRO</div>
+        <div class="form-group">
+          <label>Chave de integração PRO <span style="color:var(--silver);font-size:9px;letter-spacing:.05em;text-transform:none">(opcional — sincroniza RSVP com o app)</span></label>
+          <input type="text" id="cfgProKey" placeholder="Cole aqui sua chave do app PRO">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-save" onclick="salvarConfig()">Salvar configurações</button>
+      </div>
+    </div>
+
+  </div><!-- /home -->
+
+  <!-- RODAPÉ -->
+  <footer style="text-align:center;padding:28px 24px;border-top:1px solid var(--border);margin-top:8px">
+    <img src="logo.png" style="width:100px;height:auto;opacity:.4" alt="Notas da Noiva" onerror="this.style.display='none'">
+  </footer>
+
+  <!-- ─── ABA LISTA ─── -->
+  <div id="lista" class="section">
+    <div class="sec-header">
+      <h2>Lista de presentes</h2>
+      <p>Cada presente é uma forma de nos ajudar a construir nosso lar.</p>
+    </div>
+    <div class="edit-hint" id="listEditHint" style="display:none">Clique nos campos para editar · clique na imagem para trocar</div>
+    <div class="add-gift-wrap" id="addGiftBtn" style="display:none">
+      <button class="btn-add-gift" onclick="addGift()"><i class="ti ti-plus"></i> Adicionar presente</button>
+    </div>
+    <div class="gift-list" id="giftList"></div>
+  </div>
+
+  <!-- ─── ABA CONVIDADOS (só noiva) ─── -->
+  <div id="convidados" class="section">
+    <div class="sec-header">
+      <h2>Convidados</h2>
+      <p>Cadastre os convites para que os convidados possam confirmar presença.</p>
+    </div>
+    <div class="guests-wrap">
+      <div id="convitesList"></div>
+      <div class="add-convite-form" id="addConviteForm">
+        <div class="form-section-title">Novo convite</div>
+        <div class="form-group">
+          <label>Nome do convite / família</label>
+          <input type="text" id="conviteNome" placeholder="Família Silva">
+        </div>
+        <div class="pessoas-inputs" id="pessoasInputs">
+          <div class="pessoa-input-row">
+            <input type="text" class="pessoa-inp" placeholder="Nome completo" style="border:1px solid var(--border);border-radius:2px;padding:9px 12px;font-size:13px;font-weight:300;outline:none;background:var(--bg);width:100%">
+          </div>
+        </div>
+        <button class="btn-add-pessoa" onclick="addPessoaInput()"><i class="ti ti-plus" style="font-size:13px"></i> Adicionar pessoa</button>
+        <div style="margin-top:12px">
+          <button class="btn-save" onclick="salvarConvite()">Salvar convite</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── ABA RSVP ─── -->
+  <div id="rsvp" class="section">
+    <div class="sec-header">
+      <h2>Confirmar presença</h2>
+      <p>Busque pelo nome como está no seu convite.</p>
+    </div>
+    <div class="rsvp-wrap">
+      <div class="rsvp-step active" id="step1">
+        <div class="search-box">
+          <i class="ti ti-search"></i>
+          <input type="text" id="searchInput" placeholder="Digite seu nome..." oninput="searchGuests(this.value)">
+        </div>
+        <div id="searchResults"></div>
+      </div>
+      <div class="rsvp-step" id="step2">
+        <button class="btn-back" onclick="goStep(1)"><i class="ti ti-arrow-left" style="font-size:11px"></i> Voltar</button>
+        <div class="convite-card">
+          <div class="convite-title" id="rsvpConviteName"></div>
+          <div id="guestRows"></div>
+        </div>
+        <button class="btn-confirmar-all" onclick="confirmarPresenca()">Salvar confirmações</button>
+      </div>
+      <div class="rsvp-step" id="step3">
+        <div class="success-box">
+          <div class="check-ring"><i class="ti ti-check"></i></div>
+          <h3>Obrigada!</h3>
+          <p>Sua resposta foi enviada.<br>Os noivos já foram notificados.</p>
+          <div class="success-list" id="successList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- PIX MODAL -->
+<div class="modal-bg" id="pixModal" onclick="closePixBg(event)">
+  <div class="modal">
+    <h3 id="pmName"></h3>
+    <div class="sub" id="pmValue"></div>
+    <div class="qr-box"><i class="ti ti-qrcode"></i></div>
+    <div class="pix-code" id="pmCode"></div>
+    <button class="btn-copy" onclick="doCopy()"><i class="ti ti-copy"></i> Copiar código Pix</button>
+    <button class="btn-modal-close" onclick="closePix()">Fechar</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+// CREDENCIAIS
+// ═══════════════════════════════════════════════
+const SUPABASE_URL = 'https://yqjgdbbapgsehakspuuh.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxamdkYmJhcGdzZWhha3NwdXVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MDI4NjIsImV4cCI6MjA5NTA3ODg2Mn0.MdbACOUIHzc-roXrnbrJFkCEoPqNYUJBERb0k1ekJm8';
+
+// APP PRO (integração RSVP — ativar quando quiser)
+// const APP_PRO_URL = 'https://dfyqmhwfhbzazfhyhjia.supabase.co';
+// const APP_PRO_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ═══════════════════════════════════════════════
+// ESTADO
+// ═══════════════════════════════════════════════
+let currentUser = null;
+let weddingSite = null;
+let isNoiva = false;
+let currentSlug = null;
+let gifts = [];
+let guestsList = [];
+let rsvpSelections = {};
+let selectedConvite = null;
+
+const palettes = {
+  classico: '#1A1A1A', nude: '#8B7355', sage: '#4A6741',
+  azul: '#5A7080', rosa: '#A0748A'
+};
+const fontMap = {
+  playfair: '"Playfair Display",serif',
+  cormorant: '"Cormorant Garamond",serif',
+  raleway: '"Raleway",sans-serif'
+};
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+async function init() {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    currentUser = session?.user || null;
+  } catch(e) {
+    currentUser = null;
+  }
+
+  // Detecta slug na URL: noivos.notasdanoiva.com/ana-e-joao
+  const path = window.location.pathname.replace(/^\//, '').replace('index.html', '').trim();
+  currentSlug = path || null;
+
+  try {
+    if (currentSlug) {
+      await loadSiteBySlug(currentSlug);
+    } else if (currentUser) {
+      await loadSiteByUser();
+    } else {
+      showAuth();
+    }
+  } catch(e) {
+    // fallback seguro — sempre mostra tela de login
+    showAuth();
+  }
+}
+
+async function loadSiteBySlug(slug) {
+  const { data, error } = await sb.from('wedding_sites').select('*').eq('slug', slug).single();
+  if (error || !data) {
+    // slug não encontrado
+    document.getElementById('loading').style.display = 'none';
+    document.body.innerHTML = '<div style="text-align:center;padding:80px 24px;font-family:Raleway,sans-serif;color:#888">Site não encontrado.</div>';
+    return;
+  }
+  weddingSite = data;
+  // É a noiva logada?
+  if (currentUser && currentUser.id === data.user_id) {
+    isNoiva = true;
+  }
+  renderApp();
+}
+
+async function loadSiteByUser() {
+  const { data } = await sb.from('wedding_sites').select('*').eq('user_id', currentUser.id).single();
+  weddingSite = data || null;
+  isNoiva = true;
+  if (weddingSite) currentSlug = weddingSite.slug;
+  renderApp();
+}
+
+function showAuth() {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('authScreen').style.display = 'flex';
+}
+
+function switchAuthTab(tab) {
+  document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+  document.getElementById('tabCadastro').classList.toggle('active', tab === 'cadastro');
+  document.getElementById('formLogin').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('formCadastro').style.display = tab === 'cadastro' ? 'block' : 'none';
+  document.getElementById('authError').style.display = 'none';
+}
+
+async function doCadastro() {
+  const nome = document.getElementById('cadNome').value.trim();
+  const email = document.getElementById('cadEmail').value.trim();
+  const senha = document.getElementById('cadSenha').value;
+  const err = document.getElementById('authError');
+  if (!nome || !email || !senha) { err.textContent = 'Preencha todos os campos.'; err.style.display = 'block'; return; }
+  if (senha.length < 6) { err.textContent = 'Senha deve ter pelo menos 6 caracteres.'; err.style.display = 'block'; return; }
+  const { data, error } = await sb.auth.signUp({ email, password: senha, options: { data: { nome } } });
+  if (error) { err.textContent = error.message; err.style.display = 'block'; return; }
+  currentUser = data.user;
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('loading').style.display = 'flex';
+  await loadSiteByUser();
+}
+
+async function doLogin() {
+  const email = document.getElementById('authEmail').value;
+  const password = document.getElementById('authPassword').value;
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) {
+    document.getElementById('authError').textContent = 'E-mail ou senha incorretos.';
+    document.getElementById('authError').style.display = 'block';
+    return;
+  }
+  currentUser = data.user;
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('loading').style.display = 'flex';
+  await loadSiteByUser();
+}
+
+// ═══════════════════════════════════════════════
+// RENDER APP
+// ═══════════════════════════════════════════════
+function renderApp() {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+
+  if (isNoiva) {
+    document.getElementById('modeBadge').style.display = 'block';
+    document.getElementById('persBar').style.display = 'flex';
+    document.getElementById('navConvidados').style.display = 'block';
+    document.getElementById('listEditHint').style.display = 'block';
+    document.getElementById('addGiftBtn').style.display = 'block';
+  } else {
+    document.getElementById('modeBadge').style.display = 'none';
+    document.getElementById('persBar').style.display = 'none';
+    document.getElementById('navConvidados').style.display = 'none';
+    document.getElementById('listEditHint').style.display = 'none';
+    document.getElementById('addGiftBtn').style.display = 'none';
+  }
+
+  if (weddingSite) {
+    applyStyle();
+    renderHero();
+    renderEventos();
+    renderLinkPublico();
+    // Formulário só aparece se for noiva E não tiver site ainda
+    document.getElementById('noivaCfg').style.display = (isNoiva) ? 'block' : 'none';
+    if (isNoiva) preencherForm();
+  } else {
+    // Noiva sem site ainda — só formulário
+    document.getElementById('noivaCfg').style.display = 'block';
+    document.getElementById('eventosPublico').style.display = 'none';
+  }
+
+  loadGifts();
+  if (isNoiva) loadConvidados();
+  loadGuestsForRsvp();
+}
+
+// ═══════════════════════════════════════════════
+// ESTILO
+// ═══════════════════════════════════════════════
+function applyStyle() {
+  if (!weddingSite) return;
+  const p = palettes[weddingSite.paleta] || '#1A1A1A';
+  document.documentElement.style.setProperty('--accent', p);
+  const f = fontMap[weddingSite.fonte] || fontMap.playfair;
+  applyFontToElements(f);
+}
+
+function applyFontToElements(f) {
+  document.getElementById('heroNames').style.fontFamily = f;
+  document.querySelectorAll('.evento-field .val, .sec-header h2, .modal h3, .success-box h3, .gift-name, .gift-name-edit').forEach(el => el.style.fontFamily = f);
+}
+
+function setPalette(name, el) {
+  document.documentElement.style.setProperty('--accent', palettes[name]);
+  document.querySelectorAll('.pal').forEach(x => x.classList.remove('active'));
+  el.classList.add('active');
+  if (weddingSite) { weddingSite.paleta = name; autoSaveStyle(); }
+}
+
+function setFont(name, el) {
+  const f = fontMap[name];
+  applyFontToElements(f);
+  document.querySelectorAll('.fopt').forEach(x => x.classList.remove('active'));
+  el.classList.add('active');
+  if (weddingSite) { weddingSite.fonte = name; autoSaveStyle(); }
+}
+
+async function autoSaveStyle() {
+  if (!weddingSite?.id) return;
+  await sb.from('wedding_sites').update({ paleta: weddingSite.paleta, fonte: weddingSite.fonte }).eq('id', weddingSite.id);
+}
+
+function loadBgPhoto(input) {
+  const f = input.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = e => {
+    const bg = document.getElementById('heroBg');
+    bg.style.backgroundImage = `url(${e.target.result})`;
+    bg.style.opacity = '.2';
+  };
+  r.readAsDataURL(f);
+}
+
+function loadHeroPhoto(input) {
+  const f = input.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = e => {
+    document.getElementById('phPh').style.display = 'none';
+    const img = document.getElementById('heroImg');
+    img.src = e.target.result; img.style.display = 'block';
+  };
+  r.readAsDataURL(f);
+}
+
+// ═══════════════════════════════════════════════
+// HERO & EVENTOS
+// ═══════════════════════════════════════════════
+function renderHero() {
+  if (!weddingSite) return;
+  const nome = [weddingSite.nome_noiva, weddingSite.nome_noivo].filter(Boolean);
+  if (nome.length === 2) {
+    document.getElementById('heroNames').innerHTML = `${nome[0]} <span class="hero-amp">&</span> ${nome[1]}`;
+  }
+  if (weddingSite.cerimonia_data) {
+    const d = new Date(weddingSite.cerimonia_data + 'T12:00:00');
+    document.getElementById('heroDate').textContent =
+      d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }) +
+      (weddingSite.cerimonia_local ? ` · ${weddingSite.cerimonia_local}` : '');
+  }
+  if (weddingSite.foto_casal_url) {
+    document.getElementById('phPh').style.display = 'none';
+    const img = document.getElementById('heroImg');
+    img.src = weddingSite.foto_casal_url; img.style.display = 'block';
+  }
+}
+
+function renderEventos() {
+  if (!weddingSite) return;
+  document.getElementById('eventosPublico').style.display = 'block';
+
+  // Cerimônia
+  const cerim = document.getElementById('cerimPublico');
+  cerim.innerHTML = `<div class="evento-label">Cerimônia</div>
+    <div class="evento-grid">
+      ${weddingSite.cerimonia_horario ? `<div class="evento-field"><div class="lbl">Horário</div><div class="val">${weddingSite.cerimonia_horario}</div></div>` : ''}
+      ${weddingSite.cerimonia_data ? `<div class="evento-field"><div class="lbl">Data</div><div class="val">${fmtDate(weddingSite.cerimonia_data)}</div></div>` : ''}
+      ${weddingSite.cerimonia_local ? `<div class="evento-field full"><div class="lbl">Local</div><div class="val">${weddingSite.cerimonia_maps_url ? `<a href="${weddingSite.cerimonia_maps_url}" target="_blank">${weddingSite.cerimonia_local}</a>` : weddingSite.cerimonia_local}</div></div>` : ''}
+      ${weddingSite.cerimonia_endereco ? `<div class="evento-field full"><div class="lbl">Endereço</div><div class="val">${weddingSite.cerimonia_endereco}</div></div>` : ''}
+    </div>`;
+
+  // Recepção
+  const recep = document.getElementById('recepPublico');
+  recep.innerHTML = `<div class="evento-label">Recepção</div>
+    <div class="evento-grid">
+      ${weddingSite.recepcao_horario ? `<div class="evento-field"><div class="lbl">Horário</div><div class="val">${weddingSite.recepcao_horario}</div></div>` : ''}
+      ${weddingSite.recepcao_data ? `<div class="evento-field"><div class="lbl">Data</div><div class="val">${fmtDate(weddingSite.recepcao_data)}</div></div>` : ''}
+      ${weddingSite.recepcao_local ? `<div class="evento-field full"><div class="lbl">Local</div><div class="val">${weddingSite.recepcao_maps_url ? `<a href="${weddingSite.recepcao_maps_url}" target="_blank">${weddingSite.recepcao_local}</a>` : weddingSite.recepcao_local}</div></div>` : ''}
+      ${weddingSite.recepcao_endereco ? `<div class="evento-field full"><div class="lbl">Endereço</div><div class="val">${weddingSite.recepcao_endereco}</div></div>` : ''}
+    </div>`;
+
+  // Dress code
+  const dress = document.getElementById('dressPublico');
+  if (weddingSite.dress_code) {
+    dress.innerHTML = `<i class="ti ti-hanger"></i><div><div class="lbl">Dress code</div><div class="val">${weddingSite.dress_code}</div></div>`;
+    dress.style.display = 'flex';
+  } else {
+    dress.style.display = 'none';
+  }
+}
+
+function renderLinkPublico() {
+  if (!isNoiva || !weddingSite?.slug) return;
+  const box = document.getElementById('linkPublicoBox');
+  box.style.display = 'flex';
+  const domain = window.location.hostname === 'localhost' ? 'localhost' : 'noivos.notasdanoiva.com';
+  document.getElementById('linkPublicoUrl').textContent = `${domain}/${weddingSite.slug}`;
+}
+
+function copyLink() {
+  const url = `https://noivos.notasdanoiva.com/${weddingSite.slug}`;
+  navigator.clipboard.writeText(url).catch(() => {});
+  showToast('Link copiado!');
+}
+
+function fmtDate(d) {
+  const dt = new Date(d + 'T12:00:00');
+  return dt.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// ═══════════════════════════════════════════════
+// FORMULÁRIO CONFIG
+// ═══════════════════════════════════════════════
+function preencherForm() {
+  if (!weddingSite) return;
+  const f = (id, val) => { if (val) document.getElementById(id).value = val; };
+  f('cfgNoiva', weddingSite.nome_noiva);
+  f('cfgNoivo', weddingSite.nome_noivo);
+  f('cfgSlug', weddingSite.slug);
+  f('cfgCerimData', weddingSite.cerimonia_data);
+  f('cfgCerimHorario', weddingSite.cerimonia_horario);
+  f('cfgCerimLocal', weddingSite.cerimonia_local);
+  f('cfgCerimEndereco', weddingSite.cerimonia_endereco);
+  f('cfgCerimMaps', weddingSite.cerimonia_maps_url);
+  f('cfgRecepData', weddingSite.recepcao_data);
+  f('cfgRecepHorario', weddingSite.recepcao_horario);
+  f('cfgRecepLocal', weddingSite.recepcao_local);
+  f('cfgRecepEndereco', weddingSite.recepcao_endereco);
+  f('cfgRecepMaps', weddingSite.recepcao_maps_url);
+  f('cfgDress', weddingSite.dress_code);
+  f('cfgPix', weddingSite.pix_chave);
+  f('cfgPixNome', weddingSite.pix_nome_recebedor);
+  f('cfgPixCidade', weddingSite.pix_cidade);
+  f('cfgProKey', weddingSite.pro_integration_key);
+}
+
+async function salvarConfig() {
+  const noiva = document.getElementById('cfgNoiva').value.trim();
+  const noivo = document.getElementById('cfgNoivo').value.trim();
+  const slug = document.getElementById('cfgSlug').value.trim().toLowerCase().replace(/\s+/g, '-');
+  if (!noiva || !noivo || !slug) { showToast('Preencha os nomes e o slug'); return; }
+
+  const payload = {
+    user_id: currentUser.id,
+    slug,
+    nome_noiva: noiva,
+    nome_noivo: noivo,
+    cerimonia_data: document.getElementById('cfgCerimData').value || null,
+    cerimonia_horario: document.getElementById('cfgCerimHorario').value,
+    cerimonia_local: document.getElementById('cfgCerimLocal').value,
+    cerimonia_endereco: document.getElementById('cfgCerimEndereco').value,
+    cerimonia_maps_url: document.getElementById('cfgCerimMaps').value,
+    recepcao_data: document.getElementById('cfgRecepData').value || null,
+    recepcao_horario: document.getElementById('cfgRecepHorario').value,
+    recepcao_local: document.getElementById('cfgRecepLocal').value,
+    recepcao_endereco: document.getElementById('cfgRecepEndereco').value,
+    recepcao_maps_url: document.getElementById('cfgRecepMaps').value,
+    dress_code: document.getElementById('cfgDress').value,
+    pix_chave: document.getElementById('cfgPix').value,
+    pix_nome_recebedor: document.getElementById('cfgPixNome').value,
+    pix_cidade: document.getElementById('cfgPixCidade').value,
+    pro_integration_key: document.getElementById('cfgProKey').value || null,
+    paleta: weddingSite?.paleta || 'classico',
+    fonte: weddingSite?.fonte || 'playfair',
+    publicado: true,
+    atualizado_em: new Date().toISOString(),
+  };
+
+  let result;
+  if (weddingSite?.id) {
+    result = await sb.from('wedding_sites').update(payload).eq('id', weddingSite.id).select().single();
+  } else {
+    result = await sb.from('wedding_sites').insert(payload).select().single();
+  }
+
+  if (result.error) { showToast('Erro ao salvar: ' + result.error.message); return; }
+  weddingSite = result.data;
+  currentSlug = weddingSite.slug;
+  renderHero();
+  renderEventos();
+  renderLinkPublico();
+  showToast('Salvo com sucesso!');
+}
+
+// ═══════════════════════════════════════════════
+// LISTA DE PRESENTES
+// ═══════════════════════════════════════════════
+async function loadGifts() {
+  if (!weddingSite?.id) { renderGifts(); return; }
+  const { data } = await sb.from('gift_list').select('*').eq('wedding_site_id', weddingSite.id).order('ordem');
+  gifts = data || [];
+  renderGifts();
+}
+
+function renderGifts() {
+  const el = document.getElementById('giftList');
+  if (!gifts.length) {
+    el.innerHTML = `<div class="empty-state"><i class="ti ti-gift"></i>${isNoiva ? 'Adicione presentes à lista acima.' : 'Lista de presentes em breve.'}</div>`;
+    return;
+  }
+  el.innerHTML = gifts.map(g => `
+    <div class="gift-item">
+      <div class="gift-img${isNoiva ? ' editable' : ''}" title="${isNoiva ? 'Trocar imagem' : ''}">
+        ${g.imagem_url ? `<img src="${g.imagem_url}" style="display:block" alt="">` : `<i class="ti ti-photo"></i>`}
+        ${isNoiva ? `<input type="file" accept="image/*" onchange="uploadGiftImg(this,'${g.id}')">` : ''}
+      </div>
+      <div class="gift-body">
+        ${isNoiva
+          ? `<input class="gift-name-edit" value="${esc(g.nome)}" onchange="updateGift('${g.id}','nome',this.value)">`
+          : `<div class="gift-name">${esc(g.nome)}</div>`}
+        ${isNoiva
+          ? `<input class="gift-desc-edit" value="${esc(g.descricao||'')}" onchange="updateGift('${g.id}','descricao',this.value)" placeholder="Descrição">`
+          : `<div class="gift-desc">${esc(g.descricao||'')}</div>`}
+        ${isNoiva
+          ? `<input class="gift-value-edit" value="R$ ${fmtVal(g.valor)}" onchange="parseGiftVal('${g.id}',this.value)" onblur="refmtGiftVal('${g.id}',this)">`
+          : `<div class="gift-value">R$ ${fmtVal(g.valor)}</div>`}
+        ${isNoiva ? `
+        <div class="gift-cardlink-wrap">
+          <label>Link cartão</label>
+          <input class="gift-cardlink-edit" value="${esc(g.card_link||'')}" placeholder="cole o link do MP, PicPay…" onchange="updateGift('${g.id}','card_link',this.value)">
+        </div>` : ''}
+        <div class="gift-btns-row">
+          <div class="gift-actions">
+            <button class="btn-pix" onclick="openPix('${g.id}')">Pix</button>
+            <button class="btn-card" onclick="openCard('${g.id}')">Cartão</button>
+          </div>
+          ${isNoiva ? `<button class="btn-remove" onclick="removeGift('${g.id}')">remover</button>` : ''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+async function addGift() {
+  if (!weddingSite?.id) { showToast('Salve as configurações primeiro'); return; }
+  const { data } = await sb.from('gift_list').insert({
+    wedding_site_id: weddingSite.id,
+    nome: 'Novo presente',
+    descricao: 'Descrição',
+    valor: 0,
+    ordem: gifts.length,
+  }).select().single();
+  if (data) { gifts.push(data); renderGifts(); }
+}
+
+async function updateGift(id, field, value) {
+  await sb.from('gift_list').update({ [field]: value }).eq('id', id);
+  const g = gifts.find(x => x.id === id);
+  if (g) g[field] = value;
+}
+
+async function removeGift(id) {
+  await sb.from('gift_list').delete().eq('id', id);
+  gifts = gifts.filter(x => x.id !== id);
+  renderGifts();
+}
+
+async function uploadGiftImg(input, id) {
+  const f = input.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = async e => {
+    await updateGift(id, 'imagem_url', e.target.result);
+    renderGifts();
+  };
+  r.readAsDataURL(f);
+}
+
+function parseGiftVal(id, val) {
+  const n = parseFloat(val.replace(/[^\d,]/g, '').replace(',', '.'));
+  if (!isNaN(n)) updateGift(id, 'valor', n);
+}
+
+function refmtGiftVal(id, el) {
+  const g = gifts.find(x => x.id === id);
+  if (g) el.value = 'R$ ' + fmtVal(g.valor);
+}
+
+function fmtVal(v) {
+  return (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+}
+
+function esc(s) {
+  return String(s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+// ─── PIX ───
+function openPix(id) {
+  const g = gifts.find(x => x.id === id); if (!g) return;
+  const pix = weddingSite?.pix_chave;
+  if (!pix) { showToast('Chave Pix não configurada'); return; }
+  document.getElementById('pmName').textContent = g.nome;
+  document.getElementById('pmValue').textContent = 'R$ ' + fmtVal(g.valor) + ' · Pix';
+  const code = gerarPixCopiaECola(pix, weddingSite.pix_nome_recebedor || 'Noiva', weddingSite.pix_cidade || 'Brasil', g.valor, g.nome);
+  document.getElementById('pmCode').textContent = code;
+  document.getElementById('pixModal').classList.add('open');
+}
+
+function openCard(id) {
+  const g = gifts.find(x => x.id === id);
+  if (g?.card_link) window.open(g.card_link, '_blank');
+  else showToast('Link de cartão não configurado');
+}
+
+function gerarPixCopiaECola(chave, nome, cidade, valor, descricao) {
+  function campo(id, v) {
+    const s = v.length.toString().padStart(2, '0');
+    return id + s + v;
+  }
+  const merchantAccountInfo = campo('00', 'BR.GOV.BCB.PIX') + campo('01', chave);
+  const mai = campo('26', merchantAccountInfo);
+  const merchantName = nome.substring(0, 25).toUpperCase();
+  const merchantCity = cidade.substring(0, 15).toUpperCase();
+  const amount = valor.toFixed(2);
+  const txid = campo('05', '***');
+  const addInfo = campo('62', txid);
+  let payload = '000201' + mai + '52040000' + '5303986' +
+    campo('54', amount) + '5802BR' +
+    campo('59', merchantName) + campo('60', merchantCity) + addInfo + '6304';
+  const crc = crc16(payload);
+  return payload + crc;
+}
+
+function crc16(str) {
+  let crc = 0xFFFF;
+  for (let i = 0; i < str.length; i++) {
+    crc ^= str.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : crc << 1;
+  }
+  return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+}
+
+function closePixBg(e) { if (e.target.id === 'pixModal') closePix(); }
+function closePix() { document.getElementById('pixModal').classList.remove('open'); }
+function doCopy() {
+  navigator.clipboard.writeText(document.getElementById('pmCode').textContent).catch(() => {});
+  showToast('Código copiado!');
+}
+
+// ═══════════════════════════════════════════════
+// CONVIDADOS
+// ═══════════════════════════════════════════════
+async function loadConvidados() {
+  if (!weddingSite?.id) return;
+  const { data } = await sb.from('guests').select('*, rsvp_responses(confirmado)').eq('wedding_site_id', weddingSite.id);
+  guestsList = data || [];
+  renderConvidados();
+}
+
+function renderConvidados() {
+  const convites = {};
+  guestsList.forEach(g => {
+    const c = g.convite || 'Sem convite';
+    if (!convites[c]) convites[c] = [];
+    convites[c].push(g);
+  });
+  const el = document.getElementById('convitesList');
+  if (!Object.keys(convites).length) {
+    el.innerHTML = '<div class="empty-state"><i class="ti ti-users"></i>Nenhum convidado cadastrado ainda.</div>';
+    return;
+  }
+  el.innerHTML = Object.entries(convites).map(([nome, pessoas]) => `
+    <div class="convite-block">
+      <div class="convite-header">
+        <span class="convite-name">${nome}</span>
+        <span class="convite-count">${pessoas.length} pessoa${pessoas.length > 1 ? 's' : ''}</span>
+      </div>
+      <div class="convite-pessoas">
+        ${pessoas.map(p => {
+          const rsvp = p.rsvp_responses?.[0];
+          const status = rsvp ? (rsvp.confirmado ? 'confirmado' : 'recusado') : 'pendente';
+          const label = rsvp ? (rsvp.confirmado ? 'Confirmado' : 'Não vai') : 'Pendente';
+          return `<div class="pessoa-row">
+            <span class="pessoa-nome">${p.nome}</span>
+            <span class="pessoa-status ${status}">${label}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function addPessoaInput() {
+  const wrap = document.getElementById('pessoasInputs');
+  const div = document.createElement('div');
+  div.className = 'pessoa-input-row';
+  div.innerHTML = `<input type="text" class="pessoa-inp" placeholder="Nome completo" style="border:1px solid var(--border);border-radius:2px;padding:9px 12px;font-size:13px;font-weight:300;outline:none;background:var(--bg);width:100%">
+    <button class="btn-rm-pessoa" onclick="this.parentElement.remove()"><i class="ti ti-x"></i></button>`;
+  wrap.appendChild(div);
+}
+
+async function salvarConvite() {
+  if (!weddingSite?.id) { showToast('Salve as configurações primeiro'); return; }
+  const nomeConvite = document.getElementById('conviteNome').value.trim();
+  const inputs = document.querySelectorAll('.pessoa-inp');
+  const pessoas = Array.from(inputs).map(i => i.value.trim()).filter(Boolean);
+  if (!nomeConvite || !pessoas.length) { showToast('Preencha o convite e pelo menos uma pessoa'); return; }
+  const rows = pessoas.map(nome => ({ wedding_site_id: weddingSite.id, nome, convite: nomeConvite }));
+  const { error } = await sb.from('guests').insert(rows);
+  if (error) { showToast('Erro ao salvar'); return; }
+  document.getElementById('conviteNome').value = '';
+  document.querySelectorAll('.pessoa-inp').forEach((el, i) => { if (i > 0) el.parentElement.remove(); else el.value = ''; });
+  showToast('Convite salvo!');
+  loadConvidados();
+  loadGuestsForRsvp();
+}
+
+// ═══════════════════════════════════════════════
+// RSVP
+// ═══════════════════════════════════════════════
+async function loadGuestsForRsvp() {
+  if (!weddingSite?.id) return;
+  const { data } = await sb.from('guests').select('*').eq('wedding_site_id', weddingSite.id);
+  guestsList = data || [];
+}
+
+function searchGuests(q) {
+  const box = document.getElementById('searchResults');
+  if (!q || q.length < 2) { box.innerHTML = ''; return; }
+  const matches = [];
+  const seen = new Set();
+  guestsList.forEach(g => {
+    if (g.nome.toLowerCase().includes(q.toLowerCase()) && !seen.has(g.convite)) {
+      seen.add(g.convite);
+      matches.push({ convite: g.convite || g.nome, nome: g.nome });
+    }
+  });
+  if (!matches.length) { box.innerHTML = '<div class="no-result">Nenhum nome encontrado no convite</div>'; return; }
+  box.innerHTML = `<div class="result-list">${matches.map(m => `
+    <div class="result-item" onclick="selectConvite('${esc(m.convite)}')">
+      <div><div class="r-name">${m.nome}</div><div class="r-tag">${m.convite}</div></div>
+      <i class="ti ti-chevron-right" style="font-size:13px;color:var(--silver)"></i>
+    </div>`).join('')}</div>`;
+}
+
+function selectConvite(conviteNome) {
+  const pessoas = guestsList.filter(g => (g.convite || g.nome) === conviteNome);
+  if (!pessoas.length) return;
+  selectedConvite = { nome: conviteNome, pessoas };
+  rsvpSelections = {};
+  pessoas.forEach(p => { rsvpSelections[p.id] = { nome: p.nome, confirmado: null }; });
+  document.getElementById('rsvpConviteName').textContent = conviteNome;
+  renderGuestRows();
+  goStep(2);
+}
+
+function renderGuestRows() {
+  document.getElementById('guestRows').innerHTML = Object.entries(rsvpSelections).map(([id, g]) => `
+    <div class="guest-row">
+      <div class="guest-name">${g.nome}</div>
+      <div class="guest-toggle">
+        <button class="tog-btn sim ${g.confirmado === true ? 'active' : ''}" onclick="toggleGuest('${id}',true)">Sim</button>
+        <button class="tog-btn nao ${g.confirmado === false ? 'active' : ''}" onclick="toggleGuest('${id}',false)">Não</button>
+      </div>
+    </div>`).join('');
+}
+
+function toggleGuest(id, val) {
+  rsvpSelections[id].confirmado = rsvpSelections[id].confirmado === val ? null : val;
+  renderGuestRows();
+}
+
+async function confirmarPresenca() {
+  const pendente = Object.values(rsvpSelections).some(g => g.confirmado === null);
+  if (pendente) { showToast('Confirme a presença de cada pessoa'); return; }
+
+  const rows = Object.entries(rsvpSelections).map(([guest_id, g]) => ({
+    wedding_site_id: weddingSite.id,
+    guest_id,
+    confirmado: g.confirmado,
+  }));
+
+  await sb.from('rsvp_responses').upsert(rows, { onConflict: 'guest_id' });
+
+  // ── Integração com App PRO ──
+  // Ativa automaticamente se a noiva tiver configurado a chave PRO
+  if (weddingSite.pro_integration_key) {
+    await fetch('/.netlify/functions/rsvp-sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        wedding_site_id: weddingSite.id,
+        pro_key: weddingSite.pro_integration_key,
+        responses: rows
+      }),
+    });
+  }
+
+  document.getElementById('successList').innerHTML = Object.values(rsvpSelections).map(g =>
+    `<div class="success-row"><span>${g.nome}</span><span class="${g.confirmado ? 's-sim' : 's-nao'}">${g.confirmado ? 'Confirmado' : 'Não irá'}</span></div>`
+  ).join('');
+  goStep(3);
+}
+
+// ═══════════════════════════════════════════════
+// UTILITÁRIOS
+// ═══════════════════════════════════════════════
+function goTab(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const tabs = ['home', 'lista', 'convidados', 'rsvp'];
+  const btns = document.querySelectorAll('.nav-btn');
+  const visibleBtns = Array.from(btns);
+  const idx = visibleBtns.findIndex(b => b.getAttribute('onclick')?.includes(id));
+  if (idx >= 0) visibleBtns[idx].classList.add('active');
+}
+
+function goStep(n) {
+  document.querySelectorAll('.rsvp-step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step' + n).classList.add('active');
+  if (n === 1) { document.getElementById('searchInput').value = ''; document.getElementById('searchResults').innerHTML = ''; }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ─── CLICK NA FOTO DO HERO ───
+document.getElementById('heroPhoto').addEventListener('click', () => {
+  if (isNoiva) document.getElementById('heroPhotoInput').click();
+});
+
+// ─── START ───
+init();
+</script>
+</body>
+</html>
