@@ -155,7 +155,7 @@ input,select,textarea,button{font-family:var(--font-b)}
 .btn-add-gift:hover{border-color:var(--text);color:var(--text);background:var(--bg2)}
 
 /* ─── PERSONALIZAÇÕES ─── */
-.pers-panel{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:80;display:none;flex-direction:column;gap:6px;background:white;border:1px solid var(--border);border-right:none;border-radius:8px 0 0 8px;padding:12px 10px;box-shadow:-4px 0 20px rgba(0,0,0,.06)}
+.pers-panel{display:none!important}
 .pers-panel.show{display:flex}
 .pers-title{font-size:8px;letter-spacing:.15em;text-transform:uppercase;color:var(--silver);text-align:center;margin-bottom:4px}
 .pal-dot{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .18s;flex-shrink:0}
@@ -347,6 +347,7 @@ footer img{width:90px;height:auto;opacity:.35}
     ✦ Modo edição
     <a onclick="openCfg()">Configurar site</a>
     <a onclick="toggleGuestAdmin()">Convidados</a>
+    <a onclick="togglePreview()">Visualizar</a>
     <a onclick="copyLink()">Copiar link</a>
   </div>
 
@@ -1041,6 +1042,8 @@ function renderGifts(){
   }
   // Noiva vê todos; público vê só 3
   const preview=isNoiva?gifts:gifts.slice(0,3);
+  const wrap=document.getElementById('verTodosWrap');
+  if(wrap) wrap.style.display=(!isNoiva&&gifts.length>3)?'block':'none';
   el.innerHTML=preview.map(g=>{
     const imgHtml=g.imagem_url?`<img src="${g.imagem_url}" style="display:block" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`+`<i class="ti ti-photo" style="display:none"></i>`:`<i class="ti ti-photo"></i>`;
     const fileHtml=isNoiva?`<input type="file" accept="image/*" onchange="uploadGiftImg(this,'${g.id}')">`:'';
@@ -1073,9 +1076,7 @@ function renderGifts(){
       </div>
     </div>`;
   }).join('');
-  // Mostrar botão "ver todos" só para convidados quando tem mais de 3
-  const wrap=document.getElementById('verTodosWrap');
-  if(wrap) wrap.style.display=(!isNoiva&&gifts.length>3)?'block':'none';
+  // wrap já foi tratado acima
 }
 
 async function addGift(){
@@ -1279,6 +1280,20 @@ function goStep(n){
 }
 
 // ═══ UTILS ═══
+function togglePreview(){
+  isNoiva=!isNoiva;
+  const badge=document.getElementById('noivaBadge');
+  const persPanel=document.getElementById('persPanel');
+  const addBtn=document.getElementById('addGiftBtn');
+  if(isNoiva){
+    badge.innerHTML='✦ Modo edição <a onclick="openCfg()">Configurar site</a> <a onclick="toggleGuestAdmin()">Convidados</a> <a onclick="togglePreview()">Visualizar</a> <a onclick="copyLink()">Copiar link</a>';
+    if(addBtn)addBtn.style.display='flex';
+  } else {
+    badge.innerHTML='<span style="opacity:.6">Visualizando como convidado</span> <a onclick="togglePreview()">← Voltar à edição</a>';
+    if(addBtn)addBtn.style.display='none';
+  }
+  renderGifts();
+}
 function navTo(id){const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:'smooth'});}
 function fmtDate(d){return new Date(d+'T12:00:00').toLocaleDateString('pt-BR',{day:'numeric',month:'short',year:'numeric'});}
 function esc(s){return String(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
