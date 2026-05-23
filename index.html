@@ -1453,9 +1453,72 @@ function doCopy() {
 // ═══════════════════════════════════════════════
 async function loadConvidados() {
   if (!weddingSite?.id) return;
+
+  // Se tem chave PRO, busca convidados do app PRO
+  if (weddingSite.pro_integration_key) {
+    try {
+      const res = await fetch('/.netlify/functions/rsvp-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get_guests', pro_key: weddingSite.pro_integration_key }),
+      });
+      const data = await res.json();
+      if (data.guests && data.guests.length > 0) {
+        guestsList = data.guests;
+        renderConvidadosPro();
+        return;
+      }
+    } catch(e) {
+      console.log('Erro ao buscar do PRO');
+    }
+  }
+
+  // Fallback: convidados locais
   const { data } = await sb.from('guests').select('*, rsvp_responses(confirmado)').eq('wedding_site_id', weddingSite.id);
   guestsList = data || [];
   renderConvidados();
+}
+
+function renderConvidadosPro() {
+  // Agrupa por convite
+  const convites = {};
+  guestsList.forEach(g => {
+    const c = g.convite || g.nome;
+    if (!convites[c]) convites[c] = [];
+    convites[c].push(g);
+  });
+
+  const el = document.getElementById('convitesList');
+  if (!Object.keys(convites).length) {
+    el.innerHTML = '<div class="empty-state"><i class="ti ti-users"></i>Nenhum convidado encontrado no app PRO.</div>';
+    // Esconde formulário de adicionar convite pois vem do PRO
+    document.getElementById('addConviteForm').style.display = 'none';
+    return;
+  }
+
+  // Esconde formulário — convidados vêm do PRO
+  document.getElementById('addConviteForm').style.display = 'none';
+
+  el.innerHTML = Object.entries(convites).map(([nome, pessoas]) => `
+    <div class="convite-block">
+      <div class="convite-header">
+        <span class="convite-name">${nome}</span>
+        <span class="convite-count">${pessoas.length} pessoa${pessoas.length > 1 ? 's' : ''}</span>
+      </div>
+      <div class="convite-pessoas">
+        ${pessoas.map(p => {
+          const status = p.confirmado === true ? 'confirmado' : p.confirmado === false ? 'recusado' : 'pendente';
+          const label = p.confirmado === true ? 'Confirmado' : p.confirmado === false ? 'Não vai' : 'Pendente';
+          return `<div class="pessoa-row">
+            <span class="pessoa-nome">${p.nome}</span>
+            <span class="pessoa-status ${status}">${label}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`).join('') +
+    `<div style="text-align:center;padding:12px;font-size:10px;color:var(--silver);letter-spacing:.1em;text-transform:uppercase">
+      Lista sincronizada com Noiva Independente PRO
+    </div>`;
 }
 
 function renderConvidados() {
@@ -1520,6 +1583,26 @@ async function salvarConvite() {
 // ═══════════════════════════════════════════════
 async function loadGuestsForRsvp() {
   if (!weddingSite?.id) return;
+
+  // Se tem chave PRO, busca convidados do app PRO
+  if (weddingSite.pro_integration_key) {
+    try {
+      const res = await fetch('/.netlify/functions/rsvp-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get_guests', pro_key: weddingSite.pro_integration_key }),
+      });
+      const data = await res.json();
+      if (data.guests && data.guests.length > 0) {
+        guestsList = data.guests;
+        return;
+      }
+    } catch(e) {
+      console.log('Erro ao buscar convidados do PRO, usando lista local');
+    }
+  }
+
+  // Fallback: convidados cadastrados no site dos noivos
   const { data } = await sb.from('guests').select('*').eq('wedding_site_id', weddingSite.id);
   guestsList = data || [];
 }
@@ -1582,18 +1665,21 @@ async function confirmarPresenca() {
 
   await sb.from('rsvp_responses').upsert(rows, { onConflict: 'guest_id' });
 
-  // ── Integração com App PRO ──
-  // Ativa automaticamente se a noiva tiver configurado a chave PRO
+  // ── Sync de volta ao App PRO ──
   if (weddingSite.pro_integration_key) {
-    await fetch('/.netlify/functions/rsvp-sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        wedding_site_id: weddingSite.id,
-        pro_key: weddingSite.pro_integration_key,
-        responses: rows
-      }),
-    });
+    try {
+      await fetch('/.netlify/functions/rsvp-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'sync_rsvp',
+          pro_key: weddingSite.pro_integration_key,
+          responses: rows,
+        }),
+      });
+    } catch(e) {
+      console.log('Erro ao sincronizar com PRO');
+    }
   }
 
   document.getElementById('successList').innerHTML = Object.values(rsvpSelections).map(g =>
