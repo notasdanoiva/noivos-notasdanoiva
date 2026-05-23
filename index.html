@@ -1660,6 +1660,7 @@ async function confirmarPresenca() {
   const rows = Object.entries(rsvpSelections).map(([guest_id, g]) => ({
     wedding_site_id: weddingSite.id,
     guest_id,
+    nome: g.nome,
     confirmado: g.confirmado,
   }));
 
