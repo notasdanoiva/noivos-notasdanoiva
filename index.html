@@ -435,8 +435,9 @@ footer img{width:90px;height:auto;opacity:.35}
       <i class="ti ti-plus"></i> Adicionar presente
     </button>
     <!-- botão ver todos (público) -->
-    <div id="verTodosWrap" style="display:none;text-align:center;margin-top:20px">
-      <button onclick="verTodosPresentes()" style="background:none;border:1px solid var(--border2);border-radius:2px;padding:11px 28px;font-size:10px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;color:var(--text);font-family:var(--font-b);transition:all .2s" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background='none'">
+    <div id="verTodosWrap" style="display:none;text-align:center;margin-top:28px">
+      <button onclick="verTodosPresentes()" class="btn-rsvp-big" style="gap:10px">
+        <i class="ti ti-gift" style="font-size:16px"></i>
         Ver lista completa
       </button>
     </div>
@@ -627,7 +628,7 @@ const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 // ═══ ESTADO ═══
-let user=null,site=null,isNoiva=false,slug=null,gifts=[],guestsList=[],rsvpSel={},selConvite=null;
+let user=null,site=null,isNoiva=false,modoEdicao=false,slug=null,gifts=[],guestsList=[],rsvpSel={},selConvite=null;
 
 const DEFAULT_GIFTS=[
   // Casa & Cozinha
@@ -746,6 +747,7 @@ function renderApp(){
     document.getElementById('persPanel').classList.add('show');
     document.getElementById('addGiftBtn').style.display='flex';
   }
+  if(isNoiva)modoEdicao=true;
   document.getElementById('navFloat').classList.add('show');
   if(site){applyStyle();renderHero();renderEventos();renderLinkBox();}
   if(isNoiva&&site)preencherForm();
@@ -1003,32 +1005,32 @@ function giftCardHtml(g){
   const imgHtml=g.imagem_url
     ?`<img src="${g.imagem_url}" style="display:block" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><i class="ti ti-photo" style="display:none"></i>`
     :`<i class="ti ti-photo"></i>`;
-  const fileHtml=isNoiva?`<input type="file" accept="image/*" onchange="uploadGiftImg(this,'${g.id}')">`:'';
-  const nameHtml=isNoiva
+  const fileHtml=modoEdicao?`<input type="file" accept="image/*" onchange="uploadGiftImg(this,'${g.id}')">`:'';
+  const nameHtml=modoEdicao
     ?`<input class="gift-name-edit" value="${esc(g.nome)}" onchange="upG('${g.id}','nome',this.value)">`
     :`<div class="gift-name">${esc(g.nome)}</div>`;
-  const descHtml=isNoiva
+  const descHtml=modoEdicao
     ?`<input class="gift-desc-edit" value="${esc(g.descricao||'')}" onchange="upG('${g.id}','descricao',this.value)" placeholder="Descrição">`
     :`<div class="gift-desc">${esc(g.descricao||'')}</div>`;
-  const valHtml=isNoiva
+  const valHtml=modoEdicao
     ?`<input class="gift-val-edit" value="R$ ${fmtV(g.valor)}" onchange="parseGV('${g.id}',this.value)" onblur="refmtGV('${g.id}',this)">`
     :`<div class="gift-value">R$ ${fmtV(g.valor)}</div>`;
-  const rmHtml=isNoiva?`<button class="btn-rm" onclick="removeGift('${g.id}')">remover</button>`:'';
+  const rmHtml=modoEdicao?`<button class="btn-rm" onclick="removeGift('${g.id}')">remover</button>`:'';
 
   // Botão cartão — edição abre campo inline, público abre link
-  const cardBtnHtml=isNoiva
+  const cardBtnHtml=modoEdicao
     ?`<button class="btn-card" onclick="toggleCardLink('${g.id}')">Cartão <i class="ti ti-pencil" style="font-size:9px"></i></button>`
     :`<button class="btn-card" onclick="openCard('${g.id}')">Cartão</button>`;
 
   // Campo inline do link de cartão (só noiva)
-  const cardLinkField=isNoiva?`<div class="gift-link-row" id="linkrow-${g.id}" style="display:none">
+  const cardLinkField=modoEdicao?`<div class="gift-link-row" id="linkrow-${g.id}" style="display:none">
     <label>Link cartão</label>
     <input class="gift-link-edit" id="linkinput-${g.id}" value="${esc(g.card_link||'')}" placeholder="cole o link do MP, PicPay…">
     <button onclick="saveCardLink('${g.id}')" style="background:var(--accent);color:white;border:none;border-radius:2px;padding:5px 10px;font-size:9px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;flex-shrink:0;white-space:nowrap">Salvar</button>
   </div>`:'';
 
   return `<div class="gift-card">
-    <div class="gift-img-wrap${isNoiva?' editable':''}" title="${isNoiva?'Trocar imagem':''}">
+    <div class="gift-img-wrap${modoEdicao?' editable':''}" title="${modoEdicao?'Trocar imagem':''}">
       ${imgHtml}${fileHtml}
     </div>
     <div class="gift-info">
@@ -1057,15 +1059,15 @@ function fecharListaModal(){
 function renderGifts(){
   const el=document.getElementById('giftList');
   if(!gifts.length){
-    el.innerHTML=`<div class="empty-state"><i class="ti ti-gift"></i>${isNoiva?'Adicione presentes acima.':'Lista de presentes em breve.'}</div>`;
+    el.innerHTML=`<div class="empty-state"><i class="ti ti-gift"></i>${modoEdicao?'Adicione presentes acima.':'Lista de presentes em breve.'}</div>`;
     const wrap=document.getElementById('verTodosWrap');
     if(wrap)wrap.style.display='none';
     return;
   }
-  const modoEdicao=isNoiva;
-  const preview=modoEdicao?gifts:gifts.slice(0,3);
+  // Todos veem 3 na página; botão abre modal completo
+  const preview=gifts.slice(0,3);
   const wrap=document.getElementById('verTodosWrap');
-  if(wrap)wrap.style.display=(!modoEdicao&&gifts.length>3)?'block':'none';
+  if(wrap)wrap.style.display=(gifts.length>3)?'block':'none';
   el.innerHTML=preview.map(g=>giftCardHtml(g)).join('');
 }
 
@@ -1290,11 +1292,10 @@ function goStep(n){
 
 // ═══ UTILS ═══
 function togglePreview(){
-  isNoiva=!isNoiva;
+  modoEdicao=!modoEdicao;
   const badge=document.getElementById('noivaBadge');
-  const persPanel=document.getElementById('persPanel');
   const addBtn=document.getElementById('addGiftBtn');
-  if(isNoiva){
+  if(modoEdicao){
     badge.innerHTML='✦ Modo edição <a onclick="openCfg()">Configurar site</a> <a onclick="toggleGuestAdmin()">Convidados</a> <a onclick="togglePreview()">Visualizar</a> <a onclick="copyLink()">Copiar link</a>';
     if(addBtn)addBtn.style.display='flex';
   } else {
