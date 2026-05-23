@@ -976,6 +976,14 @@ async function loadGifts(){
   if(gifts.length===0&&isNoiva){
     await addDefaultGifts();
   } else {
+    // Corrigir URLs antigas que possam estar quebradas
+    const SBASE='https://yqjgdbbapgsehakspuuh.supabase.co/storage/v1/object/public/gifts';
+    const needsFix=gifts.filter(g=>g.imagem_url&&!g.imagem_url.startsWith('http')&&!g.imagem_url.startsWith('data:'));
+    for(const g of needsFix){
+      const fixed=SBASE+'/'+g.imagem_url.split('/').pop();
+      await sb.from('gift_list').update({imagem_url:fixed}).eq('id',g.id);
+      g.imagem_url=fixed;
+    }
     renderGifts();
   }
 }
@@ -1007,16 +1015,24 @@ function giftCardHtml(g){
     ?`<div class="gift-link-row"><label>Cartão</label><input class="gift-link-edit" value="${esc(g.card_link||'')}" placeholder="link MP, PicPay…" onchange="upG('${g.id}','card_link',this.value)"></div>`
     :'';
   const rmHtml=isNoiva?`<button class="btn-rm" onclick="removeGift('${g.id}')">remover</button>`:'';
+  const cardBtnHtml=isNoiva
+    ?`<button class="btn-card" onclick="toggleCardLink('${g.id}')" title="Configurar link de cartão">Cartão <i class="ti ti-pencil" style="font-size:10px"></i></button>`
+    :`<button class="btn-card" onclick="openCard('${g.id}')">Cartão</button>`;
   return `<div class="gift-card">
     <div class="gift-img-wrap${isNoiva?' editable':''}" title="${isNoiva?'Trocar imagem':''}">
       ${imgHtml}${fileHtml}
     </div>
     <div class="gift-info">
-      ${nameHtml}${descHtml}${valHtml}${linkHtml}
+      ${nameHtml}${descHtml}${valHtml}
+      ${isNoiva?`<div class="gift-link-row" id="linkrow-${g.id}" style="display:${g.card_link?'flex':'none'}">
+        <label>Link cartão</label>
+        <input class="gift-link-edit" value="${esc(g.card_link||'')}" placeholder="cole o link do MP, PicPay…" onchange="upG('${g.id}','card_link',this.value)" onblur="hideCardLinkIfEmpty('${g.id}',this)">
+        <button onclick="upG('${g.id}','card_link',document.querySelector('#linkrow-${g.id} input').value);showToast('Link salvo!');document.getElementById('linkrow-${g.id}').style.display='none'" style="background:var(--accent);color:white;border:none;border-radius:2px;padding:5px 8px;font-size:9px;cursor:pointer;flex-shrink:0">OK</button>
+      </div>`:''}
       <div class="gift-btns">
         <div class="gift-pay-btns">
           <button class="btn-pix" onclick="openPix('${g.id}')">Pix</button>
-          <button class="btn-card" onclick="openCard('${g.id}')">Cartão</button>
+          ${cardBtnHtml}
         </div>
         ${rmHtml}
       </div>
@@ -1040,10 +1056,11 @@ function renderGifts(){
     document.getElementById('verTodosWrap').style.display='none';
     return;
   }
-  // Noiva vê todos; público vê só 3
-  const preview=isNoiva?gifts:gifts.slice(0,3);
+  // Noiva em edição vê todos; público e preview veem só 3
+  const modoEdicao=isNoiva;
+  const preview=modoEdicao?gifts:gifts.slice(0,3);
   const wrap=document.getElementById('verTodosWrap');
-  if(wrap) wrap.style.display=(!isNoiva&&gifts.length>3)?'block':'none';
+  if(wrap) wrap.style.display=(!modoEdicao&&gifts.length>3)?'block':'none';
   el.innerHTML=preview.map(g=>{
     const imgHtml=g.imagem_url?`<img src="${g.imagem_url}" style="display:block" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`+`<i class="ti ti-photo" style="display:none"></i>`:`<i class="ti ti-photo"></i>`;
     const fileHtml=isNoiva?`<input type="file" accept="image/*" onchange="uploadGiftImg(this,'${g.id}')">`:'';
@@ -1117,6 +1134,22 @@ function openPix(id){
   document.getElementById('pmValue').textContent='R$ '+fmtV(g.valor)+' · Pix';
   document.getElementById('pmCode').textContent=gerarPix(site.pix_chave,site.pix_nome_recebedor||'Noiva',site.pix_cidade||'Brasil',g.valor);
   document.getElementById('pixModal').classList.add('open');
+}
+function toggleCardLink(id){
+  const row=document.getElementById('linkrow-'+id);
+  if(!row)return;
+  const isVisible=row.style.display==='flex';
+  row.style.display=isVisible?'none':'flex';
+  if(!isVisible){
+    const input=row.querySelector('input');
+    if(input){input.focus();input.select();}
+  }
+}
+function hideCardLinkIfEmpty(id,input){
+  if(!input.value.trim()){
+    const row=document.getElementById('linkrow-'+id);
+    if(row)row.style.display='none';
+  }
 }
 function openCard(id){const g=gifts.find(x=>x.id===id);if(g?.card_link)window.open(g.card_link,'_blank');else showToast('Link de cartão não configurado');}
 function closePixBg(e){if(e.target.id==='pixModal')closePix();}
