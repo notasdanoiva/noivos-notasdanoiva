@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Site do Casal · Notas da Noiva</title>
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
@@ -564,7 +566,14 @@ footer img{width:90px;height:auto;opacity:.35}
     </div>
     <div class="cfg-section">
       <div class="cfg-section-label">Integração PRO <span style="font-size:9px;color:var(--silver);text-transform:none;letter-spacing:0">(opcional)</span></div>
-      <div class="cfg-row" style="margin-top:12px"><label>Chave do Noiva Independente PRO</label><input type="text" id="cfgProKey" placeholder="Cole seu user ID do app PRO"></div>
+      <div class="cfg-row" style="margin-top:12px">
+        <label>Chave do Noiva Independente PRO</label>
+        <input type="text" id="cfgProKey" placeholder="Cole aqui sua chave de integração">
+        <div style="margin-top:6px;font-size:11px;color:var(--silver);line-height:1.6">
+          <i class="ti ti-info-circle" style="font-size:12px;vertical-align:middle;margin-right:3px"></i>
+          Encontre sua chave no app <strong>Noiva Independente PRO</strong> → rodapé da tela → botão <strong>Chave</strong>. Cole aqui para sincronizar sua lista de convidados automaticamente.
+        </div>
+      </div>
     </div>
     <div class="cfg-footer">
       <button class="btn-cfg-save" onclick="salvarConfig()">Salvar</button>
