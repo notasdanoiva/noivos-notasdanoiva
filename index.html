@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -244,7 +244,7 @@ input,select,textarea,button{font-family:var(--font-b)}
 .pix-box h3{font-family:var(--font-d);font-size:20px;font-style:italic;margin-bottom:4px}
 .pix-box .sub{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--silver);margin-bottom:20px}
 .qr-box{width:128px;height:128px;margin:0 auto 14px;background:white;border:1px solid var(--border);border-radius:3px;display:flex;align-items:center;justify-content:center;padding:4px}
-.qr-box canvas{width:120px!important;height:120px!important}
+.qr-box img{width:120px!important;height:120px!important}
 .pix-code{background:var(--bg2);border:1px solid var(--border);border-radius:3px;padding:8px 10px;font-size:9px;font-family:monospace;color:var(--muted);word-break:break-all;text-align:left;margin-bottom:12px}
 .btn-copy-pix{width:100%;background:var(--accent);color:white;border:none;border-radius:3px;padding:11px;font-size:10px;letter-spacing:.15em;text-transform:uppercase;cursor:pointer;margin-bottom:6px;transition:opacity .2s;display:flex;align-items:center;justify-content:center;gap:5px}
 .btn-copy-pix:hover{opacity:.85}
@@ -613,7 +613,7 @@ footer img{width:90px;height:auto;opacity:.35}
   <div class="pix-box">
     <h3 id="pmName"></h3>
     <div class="sub" id="pmValue"></div>
-    <div class="qr-box" style="padding:8px"><canvas id="qrCanvas"></canvas></div>
+    <div class="qr-box" style="padding:4px"><div id="qrBox"></div></div>
     <div class="pix-code" id="pmCode"></div>
     <button class="btn-copy-pix" onclick="doCopyPix()"><i class="ti ti-copy"></i> Copiar código Pix</button>
     <button class="btn-pix-close" onclick="closePix()">Fechar</button>
@@ -1111,17 +1111,23 @@ function openPix(id){
   const code=gerarPix(site.pix_chave,site.pix_nome_recebedor||'Noiva',site.pix_cidade||'Brasil',g.valor);
   document.getElementById('pmCode').textContent=code;
   document.getElementById('pixModal').classList.add('open');
-  // Gerar QR code real
-  setTimeout(()=>{
-    const canvas=document.getElementById('qrCanvas');
-    if(canvas&&typeof QRCode!=='undefined'){
-      QRCode.toCanvas(canvas,code,{
-        width:112,
-        margin:1,
-        color:{dark:'#1A1A1A',light:'#FFFFFF'}
-      },err=>{if(err)console.error('QR erro:',err);});
-    }
-  },100);
+  // Gerar QR code real com qrcodejs
+  const renderQR=()=>{
+    const box=document.getElementById('qrBox');
+    if(!box)return;
+    if(typeof QRCode==='undefined'){setTimeout(renderQR,200);return;}
+    // Limpar QR anterior
+    box.innerHTML='';
+    new QRCode(box,{
+      text:code,
+      width:120,
+      height:120,
+      colorDark:'#1A1A1A',
+      colorLight:'#FFFFFF',
+      correctLevel:QRCode.CorrectLevel.M
+    });
+  };
+  setTimeout(renderQR,50);
 }
 function toggleCardLink(id){
   const row=document.getElementById('linkrow-'+id);
