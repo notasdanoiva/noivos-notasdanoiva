@@ -283,6 +283,30 @@ footer img{width:90px;height:auto;opacity:.35}
 /* ─── EMPTY ─── */
 .empty-state{text-align:center;padding:40px 24px;font-size:12px;color:var(--silver);line-height:1.8}
 .empty-state i{font-size:28px;color:var(--border2);display:block;margin-bottom:10px}
+
+/* ─── ANIMAÇÕES SCROLL ─── */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .7s ease,transform .7s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+.reveal-left{opacity:0;transform:translateX(-28px);transition:opacity .7s ease,transform .7s ease}
+.reveal-left.visible{opacity:1;transform:translateX(0)}
+.reveal-scale{opacity:0;transform:scale(.96);transition:opacity .6s ease,transform .6s ease}
+.reveal-scale.visible{opacity:1;transform:scale(1)}
+.stagger .reveal:nth-child(1){transition-delay:.0s}
+.stagger .reveal:nth-child(2){transition-delay:.1s}
+.stagger .reveal:nth-child(3){transition-delay:.2s}
+.stagger .reveal:nth-child(4){transition-delay:.3s}
+
+/* Hero entrada */
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.hero-monogram{animation:fadeUp .9s ease both}
+.hero-names{animation:fadeUp .9s ease .15s both}
+.hero-rule{animation:fadeUp .9s ease .25s both}
+.hero-date{animation:fadeUp .9s ease .35s both}
+.hero-scroll{animation:fadeUp .9s ease .6s both}
+
+/* Countdown pulso */
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+.cd-num{display:inline-block}
 </style>
 </head>
 <body>
@@ -368,8 +392,8 @@ footer img{width:90px;height:auto;opacity:.35}
 
   <!-- COUNTDOWN -->
   <div id="countdownBlock">
-    <div class="section-label">faltam</div>
-    <div class="countdown-grid" id="cdGrid">
+    <div class="section-label reveal">faltam</div>
+    <div class="countdown-grid reveal-scale" id="cdGrid">
       <div class="cd-item"><div class="cd-num" id="cdDias">—</div><div class="cd-label">dias</div></div>
       <div class="cd-item"><div class="cd-num" id="cdHoras">—</div><div class="cd-label">horas</div></div>
       <div class="cd-item"><div class="cd-num" id="cdMin">—</div><div class="cd-label">min</div></div>
@@ -379,8 +403,8 @@ footer img{width:90px;height:auto;opacity:.35}
 
   <!-- EVENTOS -->
   <section class="section-block" id="eventosSection" style="display:none">
-    <div class="section-label">o grande dia</div>
-    <div class="section-title" id="evTitle">—</div>
+    <div class="section-label reveal">o grande dia</div>
+    <div class="section-title reveal" id="evTitle">—</div>
     <div class="section-rule"></div>
     <div class="evento-pair" id="eventoPair"></div>
     <div class="dress-row" id="dressRow" style="display:none"></div>
@@ -390,9 +414,9 @@ footer img{width:90px;height:auto;opacity:.35}
 
   <!-- RSVP CTA -->
   <div id="rsvpCTA">
-    <div class="rsvp-cta-names" id="rsvpCtaNames">—</div>
-    <div class="rsvp-cta-sub">pedem a honra de sua presença</div>
-    <button class="btn-rsvp-big" onclick="openRsvp()">
+    <div class="rsvp-cta-names reveal" id="rsvpCtaNames">—</div>
+    <div class="rsvp-cta-sub reveal">pedem a honra de sua presença</div>
+    <button class="btn-rsvp-big reveal" onclick="openRsvp()">
       <i class="ti ti-heart" style="font-size:14px"></i>
       Confirmar presença
     </button>
@@ -402,9 +426,9 @@ footer img{width:90px;height:auto;opacity:.35}
 
   <!-- LISTA PRESENTES -->
   <section class="section-block" id="listSection">
-    <div class="section-label">lista de presentes</div>
-    <div class="section-title">Presenteie o casal</div>
-    <div class="section-rule"></div>
+    <div class="section-label reveal">lista de presentes</div>
+    <div class="section-title reveal">Presenteie o casal</div>
+    <div class="section-rule reveal"></div>
     <div id="giftList" class="gift-grid-wrap"></div>
     <button class="btn-add-gift" id="addGiftBtn" style="display:none" onclick="addGift()">
       <i class="ti ti-plus"></i> Adicionar presente
@@ -455,6 +479,7 @@ footer img{width:90px;height:auto;opacity:.35}
   <button class="nf-btn active" onclick="scrollTo('hero')">Início</button>
   <button class="nf-btn" onclick="scrollTo('countdownBlock')">Contagem</button>
   <button class="nf-btn" onclick="scrollTo('eventosSection')">Local</button>
+  <button class="nf-btn" onclick="scrollTo('listSection')">Presentes</button>
   <button class="nf-btn" onclick="openRsvp()">Presença</button>
 </nav>
 
@@ -698,6 +723,7 @@ function renderApp(){
   if(isNoiva)loadConvidados();
   loadGuestsForRsvp();
   startCountdown();
+  setTimeout(initReveal,100);
 }
 
 // ═══ ESTILO ═══
@@ -733,15 +759,39 @@ async function autoSave(fields){
 }
 function loadBg(input){
   const f=input.files[0];if(!f)return;
-  const r=new FileReader();
-  r.onload=e=>{
-    const bg=document.getElementById('heroBg');
-    const ov=document.getElementById('heroOverlay');
-    bg.style.backgroundImage=`url(${e.target.result})`;
-    bg.style.opacity='1';ov.style.opacity='1';
-    document.getElementById('hero').classList.add('has-photo');
+  showToast('Enviando foto...');
+  const reader=new FileReader();
+  reader.onload=async e=>{
+    // Mostrar imediatamente
+    applyHeroBg(e.target.result);
+    // Salvar no Storage
+    try{
+      const ext=f.name.split('.').pop();
+      const path=`hero/${site?.id||'temp'}.${ext}`;
+      const{error}=await sb.storage.from('gifts').upload(path,f,{upsert:true,contentType:f.type});
+      if(error)throw error;
+      const{data}=sb.storage.from('gifts').getPublicUrl(path);
+      const url=data.publicUrl+'?t='+Date.now();
+      // Salvar URL no banco
+      if(site?.id){
+        await sb.from('wedding_sites').update({foto_fundo_url:url}).eq('id',site.id);
+        if(site)site.foto_fundo_url=url;
+      }
+      showToast('Foto salva!');
+    }catch(e){
+      showToast('Foto aplicada (não salva no banco)');
+    }
   };
-  r.readAsDataURL(f);
+  reader.readAsDataURL(f);
+}
+
+function applyHeroBg(url){
+  if(!url)return;
+  const bg=document.getElementById('heroBg');
+  const ov=document.getElementById('heroOverlay');
+  bg.style.backgroundImage=`url(${url})`;
+  bg.style.opacity='1';ov.style.opacity='1';
+  document.getElementById('hero').classList.add('has-photo');
 }
 
 // ═══ HERO ═══
@@ -759,6 +809,8 @@ function renderHero(){
     const d=new Date(site.cerimonia_data+'T12:00:00');
     document.getElementById('heroDate').textContent=d.toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'});
   }
+  // Restaurar foto de fundo salva
+  if(site.foto_fundo_url) applyHeroBg(site.foto_fundo_url);
 }
 
 // ═══ EVENTOS ═══
@@ -866,8 +918,8 @@ async function salvarConfig(){
   site=result.data;slug=site.slug;
   renderHero();renderEventos();renderLinkBox();startCountdown();
   closeCfg();showToast('Salvo!');
-  // Se for primeira vez, adiciona lista padrão
-  if(!site?.id)await addDefaultGifts();
+  // Adiciona lista padrão se estiver vazia
+  await addDefaultGifts();
 }
 
 // ═══ PRESENTES ═══
@@ -879,7 +931,10 @@ async function loadGifts(){
 }
 
 async function addDefaultGifts(){
-  if(!site?.id||gifts.length)return;
+  if(!site?.id)return;
+  // Sempre verifica no banco se está vazio
+  const{data:existing}=await sb.from('gift_list').select('id').eq('wedding_site_id',site.id).limit(1);
+  if(existing&&existing.length>0)return; // já tem presentes
   const rows=DEFAULT_GIFTS.map(g=>({...g,wedding_site_id:site.id}));
   const{data}=await sb.from('gift_list').insert(rows).select();
   if(data)gifts=data;
@@ -1179,6 +1234,20 @@ function scrollTo(id){document.getElementById(id).scrollIntoView({behavior:'smoo
 function fmtDate(d){return new Date(d+'T12:00:00').toLocaleDateString('pt-BR',{day:'numeric',month:'short',year:'numeric'});}
 function esc(s){return String(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+
+// ═══ ANIMAÇÕES SCROLL ═══
+function initReveal(){
+  const obs=new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        e.target.classList.add('visible');
+        obs.unobserve(e.target);
+      }
+    });
+  },{threshold:0.15});
+  document.querySelectorAll('.reveal,.reveal-left,.reveal-scale').forEach(el=>obs.observe(el));
+}
 
 init();
 </script>
