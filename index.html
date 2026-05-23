@@ -401,7 +401,7 @@ footer img{width:90px;height:auto;opacity:.35}
   <div class="section-divider"></div>
 
   <!-- LISTA PRESENTES -->
-  <section class="section-block">
+  <section class="section-block" id="listSection">
     <div class="section-label">lista de presentes</div>
     <div class="section-title">Presenteie o casal</div>
     <div class="section-rule"></div>
@@ -409,6 +409,23 @@ footer img{width:90px;height:auto;opacity:.35}
     <button class="btn-add-gift" id="addGiftBtn" style="display:none" onclick="addGift()">
       <i class="ti ti-plus"></i> Adicionar presente
     </button>
+    <!-- botão ver todos (público) -->
+    <div id="verTodosWrap" style="display:none;text-align:center;margin-top:20px">
+      <button onclick="verTodosPresentes()" style="background:none;border:1px solid var(--border2);border-radius:2px;padding:11px 28px;font-size:10px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;color:var(--text);font-family:var(--font-b);transition:all .2s" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background='none'">
+        Ver lista completa
+      </button>
+    </div>
+    <!-- modal lista completa -->
+    <div id="listaModal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end">
+      <div style="position:absolute;inset:0;background:rgba(0,0,0,.4)" onclick="fecharListaModal()"></div>
+      <div style="position:relative;z-index:1;background:white;width:100%;max-height:90vh;overflow-y:auto;border-radius:16px 16px 0 0;padding-bottom:40px">
+        <div style="width:40px;height:4px;background:var(--border2);border-radius:2px;margin:12px auto 20px"></div>
+        <div style="font-family:var(--font-d);font-size:24px;font-style:italic;font-weight:300;text-align:center;padding:0 24px 16px;border-bottom:1px solid var(--border)">Lista completa</div>
+        <div style="padding:16px 24px 0">
+          <div id="giftListFull" class="gift-grid-wrap"></div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- CONVIDADOS ADMIN -->
@@ -556,15 +573,42 @@ const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 // ═══ ESTADO ═══
 let user=null,site=null,isNoiva=false,slug=null,gifts=[],guestsList=[],rsvpSel={},selConvite=null;
 
+const STORAGE_BASE='https://yqjgdbbapgsehakspuuh.supabase.co/storage/v1/object/public/gifts';
 const DEFAULT_GIFTS=[
-  {nome:'Jogo de panelas',descricao:'Tramontina inox 5 peças',valor:350,imagem_url:'',card_link:'',ordem:0},
-  {nome:'Jogo de cama king',descricao:'Percal 400 fios',valor:520,imagem_url:'',card_link:'',ordem:1},
-  {nome:'Cafeteira',descricao:'Nespresso Vertuo Next',valor:480,imagem_url:'',card_link:'',ordem:2},
-  {nome:'Liquidificador',descricao:'Alta potência',valor:290,imagem_url:'',card_link:'',ordem:3},
-  {nome:'Lua de mel',descricao:'Contribuição para a viagem',valor:500,imagem_url:'',card_link:'',ordem:4},
-  {nome:'Jantar romântico',descricao:'Experiência gastronômica',valor:350,imagem_url:'',card_link:'',ordem:5},
-  {nome:'Passeio de barco',descricao:'Experiência na lua de mel',valor:400,imagem_url:'',card_link:'',ordem:6},
-  {nome:'Kit banho',descricao:'Toalhas e acessórios premium',valor:220,imagem_url:'',card_link:'',ordem:7},
+  // Casa & Cozinha
+  {nome:'Jogo de panelas',descricao:'Tramontina inox 5 peças com tampas',valor:350,imagem_url:STORAGE_BASE+'/panelas.jpg',card_link:'',ordem:0},
+  {nome:'Jogo de cama king',descricao:'Percal 400 fios, 4 peças',valor:520,imagem_url:STORAGE_BASE+'/cama.jpg',card_link:'',ordem:1},
+  {nome:'Cafeteira expresso',descricao:'Nespresso Vertuo Next',valor:480,imagem_url:STORAGE_BASE+'/cafeteira.jpg',card_link:'',ordem:2},
+  {nome:'Liquidificador',descricao:'Philips Walita alta potência',valor:290,imagem_url:STORAGE_BASE+'/liquidificador.jpg',card_link:'',ordem:3},
+  {nome:'Air fryer',descricao:'Philips Walita 4,1L digital',valor:450,imagem_url:STORAGE_BASE+'/airfryer.jpg',card_link:'',ordem:4},
+  {nome:'Batedeira planetária',descricao:'KitchenAid 4,8L',valor:1200,imagem_url:STORAGE_BASE+'/batedeira.jpg',card_link:'',ordem:5},
+  {nome:'Jogo de toalhas',descricao:'Kit 8 peças felpudo premium',valor:180,imagem_url:STORAGE_BASE+'/toalhas.jpg',card_link:'',ordem:6},
+  {nome:'Jogo de banho completo',descricao:'Toalhas, tapete e avental',valor:220,imagem_url:STORAGE_BASE+'/banho.jpg',card_link:'',ordem:7},
+  {nome:'Aparelho de jantar',descricao:'Oxford porcelana 42 peças',valor:380,imagem_url:STORAGE_BASE+'/jantar-porcelana.jpg',card_link:'',ordem:8},
+  {nome:'Jogo de copos',descricao:'Bohemia cristal 12 peças',valor:150,imagem_url:STORAGE_BASE+'/copos.jpg',card_link:'',ordem:9},
+  {nome:'Frigideira antiaderente',descricao:'Le Creuset 28cm',valor:420,imagem_url:STORAGE_BASE+'/frigideira.jpg',card_link:'',ordem:10},
+  {nome:'Forma para bolo',descricao:'Kit formas Tramontina 5 peças',valor:90,imagem_url:STORAGE_BASE+'/formas.jpg',card_link:'',ordem:11},
+  {nome:'Tábua de charcutaria',descricao:'Madeira maciça com acessórios',valor:160,imagem_url:STORAGE_BASE+'/tabua.jpg',card_link:'',ordem:12},
+  {nome:'Espumante para brindar',descricao:'Kit 6 garrafas premium',valor:300,imagem_url:STORAGE_BASE+'/espumante.jpg',card_link:'',ordem:13},
+  {nome:'Conjunto de facas',descricao:'Tramontina aço inox 6 peças',valor:280,imagem_url:STORAGE_BASE+'/facas.jpg',card_link:'',ordem:14},
+  // Lar & Decoração
+  {nome:'Quadro decorativo',descricao:'Arte personalizada para o lar',valor:250,imagem_url:STORAGE_BASE+'/quadro.jpg',card_link:'',ordem:15},
+  {nome:'Luminária de mesa',descricao:'Design contemporâneo',valor:200,imagem_url:STORAGE_BASE+'/luminaria.jpg',card_link:'',ordem:16},
+  {nome:'Kit aromatizador',descricao:'Difusor + 3 essências premium',valor:120,imagem_url:STORAGE_BASE+'/aromatizador.jpg',card_link:'',ordem:17},
+  {nome:'Porta-retratos',descricao:'Kit 6 peças em metal dourado',valor:80,imagem_url:STORAGE_BASE+'/porta-retratos.jpg',card_link:'',ordem:18},
+  {nome:'Tapete sala',descricao:'Shaggy antialérgico 2x3m',valor:550,imagem_url:STORAGE_BASE+'/tapete.jpg',card_link:'',ordem:19},
+  // Tecnologia
+  {nome:'Smart speaker',descricao:'Amazon Echo com Alexa',valor:350,imagem_url:STORAGE_BASE+'/speaker.jpg',card_link:'',ordem:20},
+  {nome:'Aspirador robô',descricao:'Roomba com mapeamento',valor:900,imagem_url:STORAGE_BASE+'/aspirador.jpg',card_link:'',ordem:21},
+  // Experiências
+  {nome:'Lua de mel',descricao:'Contribuição para a viagem dos sonhos',valor:500,imagem_url:STORAGE_BASE+'/lua-de-mel.jpg',card_link:'',ordem:22},
+  {nome:'Jantar romântico',descricao:'Experiência gastronômica a dois',valor:350,imagem_url:STORAGE_BASE+'/jantar.jpg',card_link:'',ordem:23},
+  {nome:'Passeio de barco',descricao:'Experiência inesquecível na lua de mel',valor:400,imagem_url:STORAGE_BASE+'/barco.jpg',card_link:'',ordem:24},
+  {nome:'Spa day casal',descricao:'Dia de massagem e relaxamento',valor:600,imagem_url:STORAGE_BASE+'/spa.jpg',card_link:'',ordem:25},
+  {nome:'Degustação de vinhos',descricao:'Experiência em vinícola',valor:280,imagem_url:STORAGE_BASE+'/vinhos.jpg',card_link:'',ordem:26},
+  {nome:'Show ou musical',descricao:'Noite cultural inesquecível',valor:200,imagem_url:STORAGE_BASE+'/show.jpg',card_link:'',ordem:27},
+  {nome:'Aula de culinária',descricao:'Workshop gastronômico para dois',valor:300,imagem_url:STORAGE_BASE+'/culinaria.jpg',card_link:'',ordem:28},
+  {nome:'Contribuição livre',descricao:'Qualquer valor é muito bem-vindo!',valor:50,imagem_url:STORAGE_BASE+'/contribuicao.jpg',card_link:'',ordem:29},
 ];
 
 // ═══ INIT ═══
@@ -842,13 +886,58 @@ async function addDefaultGifts(){
   renderGifts();
 }
 
+function giftCardHtml(g){
+  const imgHtml=g.imagem_url?`<img src="${g.imagem_url}" style="display:block" alt="">`:`<i class="ti ti-photo"></i>`;
+  const fileHtml=isNoiva?`<input type="file" accept="image/*" onchange="uploadGiftImg(this,'${g.id}')">`:'';
+  const nameHtml=isNoiva
+    ?`<input class="gift-name-edit" value="${esc(g.nome)}" onchange="upG('${g.id}','nome',this.value)">`
+    :`<div class="gift-name">${esc(g.nome)}</div>`;
+  const descHtml=isNoiva
+    ?`<input class="gift-desc-edit" value="${esc(g.descricao||'')}" onchange="upG('${g.id}','descricao',this.value)" placeholder="Descrição">`
+    :`<div class="gift-desc">${esc(g.descricao||'')}</div>`;
+  const valHtml=isNoiva
+    ?`<input class="gift-val-edit" value="R$ ${fmtV(g.valor)}" onchange="parseGV('${g.id}',this.value)" onblur="refmtGV('${g.id}',this)">`
+    :`<div class="gift-value">R$ ${fmtV(g.valor)}</div>`;
+  const linkHtml=isNoiva
+    ?`<div class="gift-link-row"><label>Cartão</label><input class="gift-link-edit" value="${esc(g.card_link||'')}" placeholder="link MP, PicPay…" onchange="upG('${g.id}','card_link',this.value)"></div>`
+    :'';
+  const rmHtml=isNoiva?`<button class="btn-rm" onclick="removeGift('${g.id}')">remover</button>`:'';
+  return `<div class="gift-card">
+    <div class="gift-img-wrap${isNoiva?' editable':''}" title="${isNoiva?'Trocar imagem':''}">
+      ${imgHtml}${fileHtml}
+    </div>
+    <div class="gift-info">
+      ${nameHtml}${descHtml}${valHtml}${linkHtml}
+      <div class="gift-btns">
+        <div class="gift-pay-btns">
+          <button class="btn-pix" onclick="openPix('${g.id}')">Pix</button>
+          <button class="btn-card" onclick="openCard('${g.id}')">Cartão</button>
+        </div>
+        ${rmHtml}
+      </div>
+    </div>
+  </div>`;
+}
+
+function verTodosPresentes(){
+  const modal=document.getElementById('listaModal');
+  document.getElementById('giftListFull').innerHTML=gifts.map(g=>giftCardHtml(g)).join('');
+  modal.style.display='flex';
+}
+function fecharListaModal(){
+  document.getElementById('listaModal').style.display='none';
+}
+
 function renderGifts(){
   const el=document.getElementById('giftList');
   if(!gifts.length){
     el.innerHTML=`<div class="empty-state"><i class="ti ti-gift"></i>${isNoiva?'Adicione presentes acima.':'Lista de presentes em breve.'}</div>`;
+    document.getElementById('verTodosWrap').style.display='none';
     return;
   }
-  el.innerHTML=gifts.map(g=>{
+  // Noiva vê todos; público vê só 3
+  const preview=isNoiva?gifts:gifts.slice(0,3);
+  el.innerHTML=preview.map(g=>{
     const imgHtml=g.imagem_url?`<img src="${g.imagem_url}" style="display:block" alt="">`:`<i class="ti ti-photo"></i>`;
     const fileHtml=isNoiva?`<input type="file" accept="image/*" onchange="uploadGiftImg(this,'${g.id}')">`:'';
     const nameHtml=isNoiva
@@ -880,6 +969,9 @@ function renderGifts(){
       </div>
     </div>`;
   }).join('');
+  // Mostrar botão "ver todos" só para convidados quando tem mais de 3
+  const wrap=document.getElementById('verTodosWrap');
+  if(wrap) wrap.style.display=(!isNoiva&&gifts.length>3)?'block':'none';
 }
 
 async function addGift(){
@@ -891,7 +983,22 @@ async function upG(id,f,v){await sb.from('gift_list').update({[f]:v}).eq('id',id
 async function removeGift(id){await sb.from('gift_list').delete().eq('id',id);gifts=gifts.filter(x=>x.id!==id);renderGifts();}
 async function uploadGiftImg(input,id){
   const f=input.files[0];if(!f)return;
-  const r=new FileReader();r.onload=async e=>{await upG(id,'imagem_url',e.target.result);renderGifts();};r.readAsDataURL(f);
+  showToast('Enviando imagem...');
+  try{
+    const ext=f.name.split('.').pop();
+    const path=`gifts/${id}.${ext}`;
+    const{error}=await sb.storage.from('gifts').upload(path,f,{upsert:true,contentType:f.type});
+    if(error)throw error;
+    const{data}=sb.storage.from('gifts').getPublicUrl(path);
+    // Adiciona timestamp para forçar refresh do cache
+    const url=data.publicUrl+'?t='+Date.now();
+    await upG(id,'imagem_url',url);
+    renderGifts();
+    showToast('Imagem salva!');
+  }catch(e){
+    showToast('Erro ao enviar imagem');
+    console.error(e);
+  }
 }
 function parseGV(id,v){const n=parseFloat(v.replace(/[^\d,]/g,'').replace(',','.'));if(!isNaN(n))upG(id,'valor',n);}
 function refmtGV(id,el){const g=gifts.find(x=>x.id===id);if(g)el.value='R$ '+fmtV(g.valor);}
