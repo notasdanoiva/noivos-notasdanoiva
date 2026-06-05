@@ -279,6 +279,19 @@ input,select,textarea,button{font-family:var(--font-b)}
 footer{text-align:center;padding:40px 24px;border-top:1px solid var(--border)}
 footer img{width:90px;height:auto;opacity:.35}
 
+/* ─── SEÇÕES OCULTAS ─── */
+.section-hidden-guest{display:none!important}
+.section-visibility-toggle{display:none}
+.noiva-mode .section-visibility-toggle{display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:4px 8px;margin-bottom:-8px}
+.btn-toggle-section{background:none;border:none;cursor:pointer;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--silver);display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:2px;transition:all .2s;border:1px solid transparent}
+.btn-toggle-section:hover{border-color:var(--border);color:var(--text)}
+.btn-toggle-section.oculto{color:#C84040;border-color:#FFCCCC;background:#FFF8F8}
+.btn-toggle-section i{font-size:12px}
+.section-oculto-overlay{display:none}
+.noiva-mode .section-oculto-overlay{display:flex;position:absolute;inset:0;background:repeating-linear-gradient(45deg,rgba(200,64,64,.04) 0px,rgba(200,64,64,.04) 10px,transparent 10px,transparent 20px);border:1px dashed #FFAAAA;border-radius:2px;align-items:center;justify-content:center;pointer-events:none;z-index:5}
+.section-oculto-overlay span{background:rgba(255,255,255,.9);padding:3px 10px;border-radius:2px;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:#C84040;border:1px solid #FFAAAA}
+.section-wrap{position:relative}
+
 /* ─── TOAST ─── */
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--text);color:white;padding:8px 18px;border-radius:2px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;display:none;z-index:400}
 .toast.show{display:block}
@@ -395,24 +408,40 @@ footer img{width:90px;height:auto;opacity:.35}
   </div>
 
   <!-- COUNTDOWN -->
-  <div id="countdownBlock">
-    <div class="section-label reveal">faltam</div>
-    <div class="countdown-grid reveal-scale" id="cdGrid">
-      <div class="cd-item"><div class="cd-num" id="cdDias">—</div><div class="cd-label">dias</div></div>
-      <div class="cd-item"><div class="cd-num" id="cdHoras">—</div><div class="cd-label">horas</div></div>
-      <div class="cd-item"><div class="cd-num" id="cdMin">—</div><div class="cd-label">min</div></div>
-      <div class="cd-item"><div class="cd-num" id="cdSec">—</div><div class="cd-label">seg</div></div>
+  <div class="section-wrap">
+    <div class="section-visibility-toggle">
+      <button class="btn-toggle-section" id="toggleCountdown" onclick="toggleSection('countdownBlock','toggleCountdown')">
+        <i class="ti ti-eye"></i> Visível
+      </button>
+    </div>
+    <div id="countdownBlock">
+      <div class="section-oculto-overlay"><span>Oculto para convidados</span></div>
+      <div class="section-label reveal">faltam</div>
+      <div class="countdown-grid reveal-scale" id="cdGrid">
+        <div class="cd-item"><div class="cd-num" id="cdDias">—</div><div class="cd-label">dias</div></div>
+        <div class="cd-item"><div class="cd-num" id="cdHoras">—</div><div class="cd-label">horas</div></div>
+        <div class="cd-item"><div class="cd-num" id="cdMin">—</div><div class="cd-label">min</div></div>
+        <div class="cd-item"><div class="cd-num" id="cdSec">—</div><div class="cd-label">seg</div></div>
+      </div>
     </div>
   </div>
 
   <!-- EVENTOS -->
-  <section class="section-block" id="eventosSection" style="display:none">
-    <div class="section-label reveal">o grande dia</div>
-    <div class="section-title reveal" id="evTitle">—</div>
-    <div class="section-rule"></div>
-    <div class="evento-pair" id="eventoPair"></div>
-    <div class="dress-row" id="dressRow" style="display:none"></div>
-  </section>
+  <div class="section-wrap">
+    <div class="section-visibility-toggle">
+      <button class="btn-toggle-section" id="toggleEventos" onclick="toggleSection('eventosSection','toggleEventos')">
+        <i class="ti ti-eye"></i> Visível
+      </button>
+    </div>
+    <section class="section-block" id="eventosSection" style="display:none">
+      <div class="section-oculto-overlay"><span>Oculto para convidados</span></div>
+      <div class="section-label reveal">o grande dia</div>
+      <div class="section-title reveal" id="evTitle">—</div>
+      <div class="section-rule"></div>
+      <div class="evento-pair" id="eventoPair"></div>
+      <div class="dress-row" id="dressRow" style="display:none"></div>
+    </section>
+  </div>
 
   <div class="section-divider"></div>
 
