@@ -410,7 +410,7 @@ footer img{width:90px;height:auto;opacity:.35}
   <!-- COUNTDOWN -->
   <div class="section-wrap">
     <div class="section-visibility-toggle">
-      <button class="btn-toggle-section" id="toggleCountdown" onclick="toggleSection('countdownBlock','toggleCountdown')">
+      <button class="btn-toggle-section" id="toggleCountdownBlock" onclick="toggleSection('countdownBlock','toggleCountdownBlock')">
         <i class="ti ti-eye"></i> Visível
       </button>
     </div>
@@ -429,7 +429,7 @@ footer img{width:90px;height:auto;opacity:.35}
   <!-- EVENTOS -->
   <div class="section-wrap">
     <div class="section-visibility-toggle">
-      <button class="btn-toggle-section" id="toggleEventos" onclick="toggleSection('eventosSection','toggleEventos')">
+      <button class="btn-toggle-section" id="toggleEventosSection" onclick="toggleSection('eventosSection','toggleEventosSection')">
         <i class="ti ti-eye"></i> Visível
       </button>
     </div>
@@ -446,20 +446,35 @@ footer img{width:90px;height:auto;opacity:.35}
   <div class="section-divider"></div>
 
   <!-- RSVP CTA -->
-  <div id="rsvpCTA">
-    <div class="rsvp-cta-names reveal" id="rsvpCtaNames">—</div>
-    <div class="rsvp-cta-sub reveal">pedem a honra de sua presença</div>
-    <button class="btn-rsvp-big reveal" onclick="openRsvp()">
-      <i class="ti ti-heart" style="font-size:14px"></i>
-      Confirmar presença
-    </button>
+  <div class="section-wrap">
+    <div class="section-visibility-toggle">
+      <button class="btn-toggle-section" id="toggleRsvpCTA" onclick="toggleSection('rsvpCTA','toggleRsvpCTA')">
+        <i class="ti ti-eye"></i> Visível
+      </button>
+    </div>
+    <div id="rsvpCTA">
+      <div class="section-oculto-overlay"><span>Oculto para convidados</span></div>
+      <div class="rsvp-cta-names reveal" id="rsvpCtaNames">—</div>
+      <div class="rsvp-cta-sub reveal">pedem a honra de sua presença</div>
+      <button class="btn-rsvp-big reveal" onclick="openRsvp()">
+        <i class="ti ti-heart" style="font-size:14px"></i>
+        Confirmar presença
+      </button>
+    </div>
   </div>
 
   <div class="section-divider"></div>
 
   <!-- LISTA PRESENTES -->
-  <section class="section-block" id="listSection">
-    <div class="section-label reveal">lista de presentes</div>
+  <div class="section-wrap">
+    <div class="section-visibility-toggle">
+      <button class="btn-toggle-section" id="toggleListSection" onclick="toggleSection('listSection','toggleListSection')">
+        <i class="ti ti-eye"></i> Visível
+      </button>
+    </div>
+    <section class="section-block" id="listSection">
+      <div class="section-oculto-overlay"><span>Oculto para convidados</span></div>
+      <div class="section-label reveal">lista de presentes</div>
     <div class="section-title reveal">Presenteie o casal</div>
     <div class="section-rule reveal"></div>
     <div id="giftList" class="gift-grid-wrap"></div>
@@ -485,6 +500,7 @@ footer img{width:90px;height:auto;opacity:.35}
       </div>
     </div>
   </section>
+  </div><!-- /section-wrap listSection -->
 
   <!-- CONVIDADOS ADMIN -->
   <section id="guestAdmin">
@@ -794,6 +810,8 @@ function renderApp(){
   if(isNoiva)loadConvidados();
   loadGuestsForRsvp();
   startCountdown();
+  if(isNoiva)initSectionToggles();
+  else applyAllSectionVisibility();
   setTimeout(initReveal,100);
 }
 
@@ -976,18 +994,19 @@ async function salvarConfig(){
   const noivo=document.getElementById('cfgNoivo').value.trim();
   const sl=document.getElementById('cfgSlug').value.trim().toLowerCase().replace(/\s+/g,'-');
   if(!noiva||!noivo||!sl){showToast('Preencha os nomes e a URL');return;}
+  function safeUrl(id){const v=document.getElementById(id).value.trim();return(v&&isSafeUrl(v))?v:'';}
   const payload={
     user_id:user.id,slug:sl,nome_noiva:noiva,nome_noivo:noivo,
     cerimonia_data:document.getElementById('cfgCerimData').value||null,
     cerimonia_horario:document.getElementById('cfgCerimH').value,
     cerimonia_local:document.getElementById('cfgCerimLocal').value,
     cerimonia_endereco:document.getElementById('cfgCerimEnd').value,
-    cerimonia_maps_url:document.getElementById('cfgCerimMaps').value,
+    cerimonia_maps_url:safeUrl('cfgCerimMaps'),
     recepcao_data:document.getElementById('cfgRecepData').value||null,
     recepcao_horario:document.getElementById('cfgRecepH').value,
     recepcao_local:document.getElementById('cfgRecepLocal').value,
     recepcao_endereco:document.getElementById('cfgRecepEnd').value,
-    recepcao_maps_url:document.getElementById('cfgRecepMaps').value,
+    recepcao_maps_url:safeUrl('cfgRecepMaps'),
     dress_code:document.getElementById('cfgDress').value,
     pix_chave:document.getElementById('cfgPix').value,
     pix_nome_recebedor:document.getElementById('cfgPixNome').value,
@@ -996,6 +1015,10 @@ async function salvarConfig(){
     paleta:site?.paleta||'preto',
     fonte:site?.fonte||'cormorant',
     foto_fundo_url:site?.foto_fundo_url||null,
+    secao_contagem_oculta:site?.secao_contagem_oculta||false,
+    secao_eventos_oculta:site?.secao_eventos_oculta||false,
+    secao_rsvp_oculta:site?.secao_rsvp_oculta||false,
+    secao_presentes_oculta:site?.secao_presentes_oculta||false,
     publicado:true,atualizado_em:new Date().toISOString(),
   };
   let result;
@@ -1007,6 +1030,67 @@ async function salvarConfig(){
   closeCfg();showToast('Salvo!');
   // Adiciona lista padrão se estiver vazia
   await addDefaultGifts();
+}
+
+// ═══ VISIBILIDADE DE SEÇÕES ═══
+// Mapa: id do section → coluna no banco
+const SECTION_DB_MAP={
+  countdownBlock:'secao_contagem_oculta',
+  eventosSection:'secao_eventos_oculta',
+  rsvpCTA:'secao_rsvp_oculta',
+  listSection:'secao_presentes_oculta',
+};
+
+function applyAllSectionVisibility(){
+  if(!site)return;
+  Object.entries(SECTION_DB_MAP).forEach(([sectionId,col])=>{
+    const oculto=!!(site[col]);
+    applySectionState(sectionId,oculto);
+  });
+}
+
+function applySectionState(sectionId,oculto){
+  const section=document.getElementById(sectionId);
+  if(!section)return;
+  // Para convidados: ocultar/mostrar a section-wrap pai
+  const wrap=section.closest('.section-wrap')||section;
+  if(oculto){
+    if(!isNoiva)section.classList.add('section-hidden-guest');
+    else section.classList.remove('section-hidden-guest');
+    section.setAttribute('data-oculto','1');
+  } else {
+    section.classList.remove('section-hidden-guest');
+    section.removeAttribute('data-oculto');
+  }
+  // Atualizar botão toggle
+  const btnId='toggle'+sectionId.charAt(0).toUpperCase()+sectionId.slice(1);
+  const btn=document.getElementById(btnId)||wrap.querySelector('.btn-toggle-section');
+  if(btn){
+    if(oculto){
+      btn.classList.add('oculto');
+      btn.innerHTML='<i class="ti ti-eye-off"></i> Oculto';
+    } else {
+      btn.classList.remove('oculto');
+      btn.innerHTML='<i class="ti ti-eye"></i> Visível';
+    }
+  }
+}
+
+async function toggleSection(sectionId,btnId){
+  if(!isNoiva||!site?.id)return;
+  const col=SECTION_DB_MAP[sectionId];
+  if(!col)return;
+  const novoEstado=!site[col]; // inverte
+  site[col]=novoEstado;
+  applySectionState(sectionId,novoEstado);
+  await sb.from('wedding_sites').update({[col]:novoEstado}).eq('id',site.id);
+  showToast(novoEstado?'Seção oculta para convidados':'Seção visível');
+}
+
+function initSectionToggles(){
+  if(!isNoiva)return;
+  document.body.classList.add('noiva-mode');
+  applyAllSectionVisibility();
 }
 
 // ═══ PRESENTES ═══
@@ -1181,12 +1265,21 @@ async function saveCardLink(id){
   const input=document.getElementById('linkinput-'+id);
   if(!input)return;
   const val=input.value.trim();
+  if(val&&!isSafeUrl(val)){showToast('URL inválida — use https://...');return;}
   await upG(id,'card_link',val);
   const g=gifts.find(x=>x.id===id);if(g)g.card_link=val;
   document.getElementById('linkrow-'+id).style.display='none';
   showToast('Link salvo!');
 }
-function openCard(id){const g=gifts.find(x=>x.id===id);if(g?.card_link)window.open(g.card_link,'_blank');else showToast('Link de cartão não configurado');}
+function isSafeUrl(url){
+  try{const u=new URL(url);return u.protocol==='https:'||u.protocol==='http:';}catch(e){return false;}
+}
+function openCard(id){
+  const g=gifts.find(x=>x.id===id);
+  if(!g?.card_link)return showToast('Link de cartão não configurado');
+  if(!isSafeUrl(g.card_link))return showToast('Link inválido');
+  window.open(g.card_link,'_blank','noopener,noreferrer');
+}
 function closePixBg(e){if(e.target.id==='pixModal')closePix();}
 function closePix(){document.getElementById('pixModal').classList.remove('open');}
 function doCopyPix(){navigator.clipboard.writeText(document.getElementById('pmCode').textContent).catch(()=>{});showToast('Código copiado!');}
