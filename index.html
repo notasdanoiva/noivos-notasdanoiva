@@ -288,7 +288,8 @@ footer img{width:90px;height:auto;opacity:.35}
 .btn-toggle-section.oculto{color:#C84040;border-color:#FFCCCC;background:#FFF8F8}
 .btn-toggle-section i{font-size:12px}
 .section-oculto-overlay{display:none}
-.noiva-mode .section-oculto-overlay{display:flex;position:absolute;inset:0;background:repeating-linear-gradient(45deg,rgba(200,64,64,.04) 0px,rgba(200,64,64,.04) 10px,transparent 10px,transparent 20px);border:1px dashed #FFAAAA;border-radius:2px;align-items:center;justify-content:center;pointer-events:none;z-index:5}
+.noiva-mode [data-oculto="1"] .section-oculto-overlay{display:flex;position:absolute;inset:0;background:repeating-linear-gradient(45deg,rgba(200,64,64,.04) 0px,rgba(200,64,64,.04) 10px,transparent 10px,transparent 20px);border:1px dashed #FFAAAA;border-radius:2px;align-items:center;justify-content:center;pointer-events:none;z-index:5}
+.noiva-mode.preview-mode [data-oculto="1"] .section-oculto-overlay{display:none}
 .section-oculto-overlay span{background:rgba(255,255,255,.9);padding:3px 10px;border-radius:2px;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:#C84040;border:1px solid #FFAAAA}
 .section-wrap{position:relative}
 
@@ -1052,27 +1053,16 @@ function applyAllSectionVisibility(){
 function applySectionState(sectionId,oculto){
   const section=document.getElementById(sectionId);
   if(!section)return;
-  // Para convidados: ocultar/mostrar a section-wrap pai
   const wrap=section.closest('.section-wrap')||section;
-  if(oculto){
-    if(!isNoiva)section.classList.add('section-hidden-guest');
-    else section.classList.remove('section-hidden-guest');
-    section.setAttribute('data-oculto','1');
-  } else {
-    section.classList.remove('section-hidden-guest');
-    section.removeAttribute('data-oculto');
-  }
-  // Atualizar botão toggle
-  const btnId='toggle'+sectionId.charAt(0).toUpperCase()+sectionId.slice(1);
-  const btn=document.getElementById(btnId)||wrap.querySelector('.btn-toggle-section');
+  const isPreview=document.body.classList.contains('preview-mode');
+  if(oculto)wrap.setAttribute('data-oculto','1');
+  else wrap.removeAttribute('data-oculto');
+  if(oculto&&(!isNoiva||isPreview))wrap.classList.add('section-hidden-guest');
+  else wrap.classList.remove('section-hidden-guest');
+  const btn=wrap.querySelector('.btn-toggle-section');
   if(btn){
-    if(oculto){
-      btn.classList.add('oculto');
-      btn.innerHTML='<i class="ti ti-eye-off"></i> Oculto';
-    } else {
-      btn.classList.remove('oculto');
-      btn.innerHTML='<i class="ti ti-eye"></i> Visível';
-    }
+    if(oculto){btn.classList.add('oculto');btn.innerHTML='<i class="ti ti-eye-off"></i> Oculto';}
+    else{btn.classList.remove('oculto');btn.innerHTML='<i class="ti ti-eye"></i> Visível';}
   }
 }
 
@@ -1446,12 +1436,15 @@ function togglePreview(){
   const badge=document.getElementById('noivaBadge');
   const addBtn=document.getElementById('addGiftBtn');
   if(modoEdicao){
+    document.body.classList.remove('preview-mode');
     badge.innerHTML='✦ Modo edição <a onclick="openCfg()">Configurar site</a> <a onclick="toggleGuestAdmin()">Convidados</a> <a onclick="togglePreview()">Visualizar</a> <a onclick="copyLink()">Copiar link</a>';
     if(addBtn)addBtn.style.display='flex';
   } else {
+    document.body.classList.add('preview-mode');
     badge.innerHTML='<span style="opacity:.6">Visualizando como convidado</span> <a onclick="togglePreview()">← Voltar à edição</a>';
     if(addBtn)addBtn.style.display='none';
   }
+  applyAllSectionVisibility();
   renderGifts();
 }
 function navTo(id){const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:'smooth'});}
