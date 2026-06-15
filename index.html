@@ -735,7 +735,67 @@ const DEFAULT_GIFTS=[
   {nome:'Contribuição livre',descricao:'Qualquer valor é muito bem-vindo!',valor:50,imagem_url:'https://yqjgdbbapgsehakspuuh.supabase.co/storage/v1/object/public/gifts/contribuicao.png',card_link:'',ordem:29},
 ];
 
-// ═══ INIT ═══
+// ═══ VERIFICAÇÃO PRO (Supabase do app) ═══════════════
+const APP_URL  = 'https://dfyqmhwfhbzazfhyhjia.supabase.co';
+const APP_ANON = 'sb_publishable_2NM1eHWJ3SH0UPa-0ZQWyg_7XXhPW9A';
+
+async function checkAcessoPro(proKey){
+  // Retorna: 'ok' | 'trial_ativo' | 'expirado' | 'invalido'
+  if(!proKey) return 'invalido';
+  try {
+    const sbApp = supabase.createClient(APP_URL, APP_ANON);
+
+    // Verifica se o perfil existe
+    const {data:profile, error:profErr} = await sbApp
+      .from('profiles')
+      .select('id')
+      .eq('id', proKey)
+      .single();
+    if(profErr || !profile) return 'invalido';
+
+    // Verifica trial
+    const {data:trial} = await sbApp
+      .from('trials')
+      .select('expired, created_at')
+      .eq('user_id', proKey)
+      .single();
+
+    if(!trial) return 'ok'; // sem trial = pagante direto
+
+    const diasPassados = Math.floor((Date.now() - new Date(trial.created_at)) / (1000*60*60*24));
+    if(trial.expired || diasPassados >= 7) return 'expirado';
+    return 'trial_ativo';
+  } catch(e) {
+    return 'ok'; // em caso de erro de rede, não puna a noiva
+  }
+}
+
+function showSiteBloqueado(noiva, noivo){
+  const nomes = [noiva, noivo].filter(Boolean).join(' & ') || 'Este site';
+  document.getElementById('loading').style.display = 'none';
+  document.body.innerHTML = `
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(135deg,#f9f5f0 0%,#f0eaf5 100%);
+      font-family:'Jost',sans-serif;padding:40px 24px;text-align:center">
+      <div style="max-width:420px">
+        <div style="font-size:48px;margin-bottom:16px">🌸</div>
+        <h2 style="font-family:'Cormorant Garamond',serif;font-size:28px;color:#4a3f6b;
+          font-weight:400;margin:0 0 12px">${nomes}</h2>
+        <p style="color:#9b8baa;font-size:14px;line-height:1.8;margin:0 0 28px">
+          Este site está temporariamente indisponível.<br>
+          Para reativá-lo, renove seu acesso ao<br>
+          <strong style="color:#6b5f8a">Noiva Independente Pro</strong>.
+        </p>
+        <a href="https://noivaindesependente.com.br" 
+          style="display:inline-block;background:#6b5f8a;color:#fff;
+          padding:12px 32px;border-radius:4px;text-decoration:none;
+          font-size:13px;letter-spacing:.08em;text-transform:uppercase">
+          Renovar acesso
+        </a>
+      </div>
+    </div>`;
+}
+// ═════════════════════════════════════════════════════
 async function init(){
   try{const{data:{session}}=await sb.auth.getSession();user=session?.user||null;}catch(e){user=null;}
   const path=window.location.pathname.replace(/^\//,'').replace('index.html','').trim();
@@ -754,19 +814,41 @@ async function loadBySlug(s){
     document.body.innerHTML='<div style="text-align:center;padding:80px 24px;font-family:Jost,sans-serif;color:#888">Site não encontrado.</div>';
     return;
   }
-  site=data;isNoiva=!!(user&&user.id===data.user_id);
+  site=data; isNoiva=!!(user&&user.id===data.user_id);
+
+  // Verifica acesso pro (só bloqueia para visitantes, noiva logada sempre vê)
+  if(!isNoiva && site.pro_integration_key){
+    const status = await checkAcessoPro(site.pro_integration_key);
+    if(status === 'expirado'){
+      showSiteBloqueado(site.nome_noiva, site.nome_noivo);
+      return;
+    }
+  }
+
   renderApp();
 }
 
 async function loadByUser(){
   const{data}=await sb.from('wedding_sites').select('*').eq('user_id',user.id).single();
-  site=data||null;isNoiva=true;if(site)slug=site.slug;
+  site=data||null; isNoiva=true; if(site)slug=site.slug;
+
+  // Verifica status pro e guarda para mostrar aviso se trial
+  if(site?.pro_integration_key){
+    const status = await checkAcessoPro(site.pro_integration_key);
+    if(status === 'expirado'){
+      // Noiva logada vê o site mas com banner de expirado
+      window._proStatus = 'expirado';
+    } else if(status === 'trial_ativo'){
+      window._proStatus = 'trial';
+    } else {
+      window._proStatus = 'ok';
+    }
+  }
+
   renderApp();
-  // Se noiva nova sem site ainda, abre painel de configuração automaticamente
   if(!site && _proKeyPendente){
     setTimeout(()=>{
       openCfg();
-      // Preenche a chave pro no campo de integração
       const el=document.getElementById('cfgProKey');
       if(el && !el.value) el.value=_proKeyPendente;
     }, 400);
@@ -921,6 +1003,21 @@ function renderApp(){
   startCountdown();
   applyAllSectionVisibility();
   setTimeout(initReveal,100);
+
+  // Banner de aviso pro para noiva logada
+  if(isNoiva && window._proStatus && window._proStatus !== 'ok'){
+    const cor = window._proStatus === 'expirado' ? '#C0503A' : '#E67E22';
+    const msg = window._proStatus === 'expirado'
+      ? '⚠️ Seu acesso Pro expirou. Seu site está invisível para os convidados. <a href="https://noivaindesependente.com.br" style="color:#fff;font-weight:700;text-decoration:underline">Renovar agora</a>'
+      : '⏳ Você está no período de avaliação. Seu site fica ativo enquanto o trial estiver ativo.';
+    const banner = document.createElement('div');
+    banner.innerHTML = msg;
+    banner.style.cssText = `position:fixed;top:0;left:0;right:0;z-index:9999;
+      background:${cor};color:#fff;text-align:center;padding:10px 16px;
+      font-size:12px;font-family:Jost,sans-serif;letter-spacing:.03em;line-height:1.6`;
+    document.body.prepend(banner);
+    document.body.style.paddingTop = '40px';
+  }
 }
 
 // ═══ ESTILO ═══
