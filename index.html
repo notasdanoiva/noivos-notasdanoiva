@@ -346,10 +346,21 @@ footer img{width:90px;height:auto;opacity:.35}
       <button class="btn-auth" onclick="doLogin()">Entrar</button>
     </div>
     <div id="formCad" style="display:none">
+      <div style="background:#F6F4F9;border:1px solid #E2DEEB;border-radius:3px;padding:12px 14px;margin-bottom:14px;font-size:11px;color:#6B5F8A;line-height:1.8">
+        🌸 O site de casamento é exclusivo para clientes do <strong>Noiva Independente Pro</strong>.<br>
+        Para criar seu site, você precisa da sua <strong>chave de acesso</strong>:<br>
+        <span style="background:#EDE9F6;border-radius:3px;padding:2px 7px;display:inline-block;margin-top:4px">
+          📱 No app → toque no botão <strong>Chave</strong> (rodapé da tela) → <strong>Copiar</strong> → cole abaixo
+        </span>
+      </div>
+      <div class="auth-form-group">
+        <label>Chave Pro (obrigatória)</label>
+        <input type="text" id="cadChavePro" placeholder="Cole sua chave aqui" style="font-family:monospace;font-size:12px;letter-spacing:.03em">
+      </div>
       <div class="auth-form-group"><label>Seu nome</label><input type="text" id="cadNome" placeholder="Ana Silva"></div>
       <div class="auth-form-group"><label>E-mail</label><input type="email" id="cadEmail" placeholder="seu@email.com"></div>
       <div class="auth-form-group"><label>Senha</label><input type="password" id="cadSenha" placeholder="mínimo 6 caracteres"></div>
-      <button class="btn-auth" onclick="doCadastro()">Criar conta gratuita</button>
+      <button class="btn-auth" onclick="doCadastro()">Criar meu site</button>
     </div>
     <div class="auth-error" id="authError"></div>
   </div>
@@ -578,13 +589,13 @@ footer img{width:90px;height:auto;opacity:.35}
       </div>
     </div>
     <div class="cfg-section">
-      <div class="cfg-section-label">Integração PRO <span style="font-size:9px;color:var(--silver);text-transform:none;letter-spacing:0">(opcional)</span></div>
+      <div class="cfg-section-label">Integração PRO</div>
       <div class="cfg-row" style="margin-top:12px">
         <label>Chave do Noiva Independente PRO</label>
-        <input type="text" id="cfgProKey" placeholder="Cole aqui sua chave de integração">
+        <input type="text" id="cfgProKey" placeholder="Chave de integração" readonly style="font-family:monospace;font-size:12px;background:rgba(255,255,255,.4);color:var(--silver);cursor:default">
         <div style="margin-top:6px;font-size:11px;color:var(--silver);line-height:1.6">
-          <i class="ti ti-info-circle" style="font-size:12px;vertical-align:middle;margin-right:3px"></i>
-          Encontre sua chave no app <strong>Noiva Independente PRO</strong> → rodapé da tela → botão <strong>Chave</strong>. Cole aqui para sincronizar sua lista de convidados automaticamente.
+          <i class="ti ti-circle-check" style="font-size:12px;vertical-align:middle;margin-right:3px;color:#4CAF72"></i>
+          Integração ativa — as confirmações de presença do seu site aparecem automaticamente no app.
         </div>
       </div>
     </div>
@@ -685,6 +696,7 @@ const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 // ═══ ESTADO ═══
 let user=null,site=null,isNoiva=false,modoEdicao=false,slug=null,gifts=[],guestsList=[],rsvpSel={},selConvite=null;
+let _proKeyPendente=null; // chave pro usada no cadastro, salva no primeiro site criado
 
 const DEFAULT_GIFTS=[
   // Casa & Cozinha
@@ -750,8 +762,16 @@ async function loadByUser(){
   const{data}=await sb.from('wedding_sites').select('*').eq('user_id',user.id).single();
   site=data||null;isNoiva=true;if(site)slug=site.slug;
   renderApp();
+  // Se noiva nova sem site ainda, abre painel de configuração automaticamente
+  if(!site && _proKeyPendente){
+    setTimeout(()=>{
+      openCfg();
+      // Preenche a chave pro no campo de integração
+      const el=document.getElementById('cfgProKey');
+      if(el && !el.value) el.value=_proKeyPendente;
+    }, 400);
+  }
 }
-
 function showAuth(){
   document.getElementById('loading').style.display='none';
   document.getElementById('authScreen').style.display='flex';
@@ -778,16 +798,104 @@ async function doLogin(){
 }
 
 async function doCadastro(){
-  const nome=document.getElementById('cadNome').value.trim();
-  const email=document.getElementById('cadEmail').value.trim();
-  const senha=document.getElementById('cadSenha').value;
+  const chave = document.getElementById('cadChavePro').value.trim();
+  const nome  = document.getElementById('cadNome').value.trim();
+  const email = document.getElementById('cadEmail').value.trim();
+  const senha = document.getElementById('cadSenha').value;
+
+  if(!chave){showAuthErr('Cole sua chave Pro para continuar.');return;}
   if(!nome||!email||senha.length<6){showAuthErr('Preencha todos os campos (senha mínimo 6 caracteres).');return;}
-  const{data,error}=await sb.auth.signUp({email,password:senha,options:{data:{nome}}});
-  if(error){showAuthErr(error.message);return;}
-  user=data.user;
-  document.getElementById('authScreen').style.display='none';
-  document.getElementById('loading').style.display='flex';
-  await loadByUser();
+
+  // Validar chave pro no Supabase do app (projeto separado)
+  showAuthErr('');
+  const btnCad = document.querySelector('#formCad .btn-auth');
+  btnCad.textContent = 'Validando chave…';
+  btnCad.disabled = true;
+
+  try {
+    const APP_URL  = 'https://dfyqmhwfhbzazfhyhjia.supabase.co';
+    const APP_ANON = 'sb_publishable_2NM1eHWJ3SH0UPa-0ZQWyg_7XXhPW9A';
+    const sbApp = supabase.createClient(APP_URL, APP_ANON);
+
+    // Verifica se existe um perfil com esse id (a chave é o user_id do app)
+    const { data: profile, error: profErr } = await sbApp
+      .from('profiles')
+      .select('id, role, email')
+      .eq('id', chave)
+      .single();
+
+    if(profErr || !profile){
+      showAuthErr('Chave inválida. Verifique no app em Configurações → Integração.');
+      btnCad.textContent = 'Criar meu site'; btnCad.disabled = false;
+      return;
+    }
+
+    // Verifica se é pagante (não está em trial ativo ou expirado)
+    const { data: trial } = await sbApp
+      .from('trials')
+      .select('expired, created_at')
+      .eq('user_id', chave)
+      .single();
+
+    if(trial){
+      // Tem registro em trials = não é pagante direta
+      const diasPassados = Math.floor((Date.now() - new Date(trial.created_at)) / (1000*60*60*24));
+      const trialAtivo   = diasPassados < 7 && !trial.expired;
+      const expirado     = diasPassados >= 7 || trial.expired;
+      if(expirado){
+        showAuthErr('Sua conta Pro expirou. Renove o acesso no app para criar seu site.');
+        btnCad.textContent = 'Criar meu site'; btnCad.disabled = false;
+        return;
+      }
+      if(trialAtivo){
+        showAuthErr('O site de casamento é exclusivo para clientes Pro. Faça o upgrade no app!');
+        btnCad.textContent = 'Criar meu site'; btnCad.disabled = false;
+        return;
+      }
+    }
+    // Sem registro em trials = pagante ✅ — pode prosseguir
+
+    // Verifica se essa chave já foi usada pra criar um site
+    const { data: siteExist } = await sb
+      .from('wedding_sites')
+      .select('id, slug')
+      .eq('pro_integration_key', chave)
+      .single();
+
+    if(siteExist){
+      showAuthErr('Essa chave já foi usada para criar um site. Se é você, faça login normalmente.');
+      btnCad.textContent = 'Criar meu site'; btnCad.disabled = false;
+      return;
+    }
+
+    // Tudo ok — criar conta
+    btnCad.textContent = 'Criando sua conta…';
+    const { data, error } = await sb.auth.signUp({
+      email,
+      password: senha,
+      options: { data: { nome, pro_integration_key: chave } }
+    });
+
+    if(error){
+      showAuthErr(error.message === 'User already registered'
+        ? 'Este e-mail já tem uma conta. Faça login normalmente.'
+        : error.message);
+      btnCad.textContent = 'Criar meu site'; btnCad.disabled = false;
+      return;
+    }
+
+    user = data.user;
+    // Salva a pro_integration_key direto no wedding_sites ao criar
+    _proKeyPendente = chave;
+
+    document.getElementById('authScreen').style.display='none';
+    document.getElementById('loading').style.display='flex';
+    await loadByUser();
+
+  } catch(e) {
+    showAuthErr('Erro ao validar chave. Tente novamente.');
+    btnCad.textContent = 'Criar meu site'; btnCad.disabled = false;
+  }
 }
 
 function showAuthErr(msg){
@@ -988,7 +1096,7 @@ function preencherForm(){
   f('cfgRecepLocal',site.recepcao_local);f('cfgRecepEnd',site.recepcao_endereco);f('cfgRecepMaps',site.recepcao_maps_url);
   f('cfgDress',site.dress_code);
   f('cfgPix',site.pix_chave);f('cfgPixNome',site.pix_nome_recebedor);f('cfgPixCidade',site.pix_cidade);
-  f('cfgProKey',site.pro_integration_key);
+  f('cfgProKey', site.pro_integration_key || _proKeyPendente);
 }
 async function salvarConfig(){
   const noiva=document.getElementById('cfgNoiva').value.trim();
@@ -1012,7 +1120,7 @@ async function salvarConfig(){
     pix_chave:document.getElementById('cfgPix').value,
     pix_nome_recebedor:document.getElementById('cfgPixNome').value,
     pix_cidade:document.getElementById('cfgPixCidade').value,
-    pro_integration_key:document.getElementById('cfgProKey').value||null,
+    pro_integration_key:document.getElementById('cfgProKey').value || _proKeyPendente || site?.pro_integration_key || null,
     paleta:site?.paleta||'preto',
     fonte:site?.fonte||'cormorant',
     foto_fundo_url:site?.foto_fundo_url||null,
