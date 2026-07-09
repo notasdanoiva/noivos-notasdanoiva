@@ -559,6 +559,17 @@ footer img{width:90px;height:auto;opacity:.35}
       </div>
     </div>
     <div class="cfg-section">
+      <div class="cfg-section-label">Cartão de crédito (Mercado Pago)</div>
+      <div class="cfg-row" style="margin-top:12px"><label>Access Token de produção</label><input type="password" id="cfgMPToken" placeholder="APP_USR-..."></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px">
+        <span id="mpStatusBadge" style="font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)"></span>
+        <a onclick="removerMPToken()" style="font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--silver);cursor:pointer">Remover</a>
+      </div>
+      <div style="font-size:10px;color:var(--silver);line-height:1.5;margin-top:8px">
+        Gere em <a href="https://www.mercadopago.com.br/developers/panel" target="_blank" rel="noopener" style="color:var(--silver)">mercadopago.com.br/developers</a> → Suas integrações → Credenciais de produção. O token fica em um cofre separado e nunca é enviado ao navegador dos convidados. Deixe em branco ao salvar para manter o token já cadastrado.
+      </div>
+    </div>
+    <div class="cfg-section">
       <div class="cfg-section-label">Estilo</div>
       <div style="margin-top:12px;margin-bottom:10px">
         <label style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--silver);display:block;margin-bottom:8px">Paleta de cor</label>
@@ -1194,6 +1205,15 @@ function preencherForm(){
   f('cfgDress',site.dress_code);
   f('cfgPix',site.pix_chave);f('cfgPixNome',site.pix_nome_recebedor);f('cfgPixCidade',site.pix_cidade);
   f('cfgProKey', site.pro_integration_key || _proKeyPendente);
+  document.getElementById('cfgMPToken').value='';
+  atualizarBadgeMP();
+}
+function atualizarBadgeMP(){
+  const badge=document.getElementById('mpStatusBadge');
+  const inp=document.getElementById('cfgMPToken');
+  if(!badge||!inp)return;
+  badge.textContent=site?.mp_ativo?'✓ Cartão automático ativado':'';
+  inp.placeholder=site?.mp_ativo?'Token salvo — deixe em branco para manter':'APP_USR-...';
 }
 async function salvarConfig(){
   const noiva=document.getElementById('cfgNoiva').value.trim();
@@ -1232,10 +1252,37 @@ async function salvarConfig(){
   else result=await sb.from('wedding_sites').insert(payload).select().single();
   if(result.error){showToast('Erro: '+result.error.message);return;}
   site=result.data;slug=site.slug;
+  const mpTokenVal=document.getElementById('cfgMPToken').value.trim();
+  if(mpTokenVal)await salvarMPToken(mpTokenVal);
   renderHero();renderEventos();renderLinkBox();startCountdown();
+  atualizarBadgeMP();renderGifts();
   closeCfg();showToast('Salvo!');
   // Adiciona lista padrão se estiver vazia
   await addDefaultGifts();
+}
+
+// ═══ CARTÃO (MERCADO PAGO) ═══
+async function salvarMPToken(token){
+  const{data:{session}}=await sb.auth.getSession();
+  if(!session){showToast('Sessão expirada, faça login novamente');return false;}
+  try{
+    const res=await fetch('/.netlify/functions/save-mp-token',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({access_token:session.access_token,mp_access_token:token})
+    });
+    const j=await res.json().catch(()=>({}));
+    if(!res.ok){showToast(j.error||'Erro ao salvar token');return false;}
+    site.mp_ativo=j.mp_ativo;
+    return true;
+  }catch(e){showToast('Erro ao salvar token');return false;}
+}
+async function removerMPToken(){
+  if(!site?.id){showToast('Salve as configurações primeiro');return;}
+  if(!confirm('Remover o token do Mercado Pago? O pagamento com cartão automático será desativado.'))return;
+  const ok=await salvarMPToken('');
+  document.getElementById('cfgMPToken').value='';
+  atualizarBadgeMP();renderGifts();
+  showToast(ok?'Token removido':'Erro ao remover');
 }
 
 // ═══ VISIBILIDADE DE SEÇÕES ═══
@@ -1311,13 +1358,15 @@ function giftCardHtml(g){
     :`<div class="gift-value">R$ ${fmtV(g.valor)}</div>`;
   const rmHtml=modoEdicao?`<button class="btn-rm" onclick="removeGift('${g.id}')">remover</button>`:'';
 
-  // Botão cartão — edição abre campo inline, público abre link
+  // Botão cartão — com MP ativo é automático; sem MP, edição abre campo de link manual
   const cardBtnHtml=modoEdicao
-    ?`<button class="btn-card" onclick="toggleCardLink('${g.id}')">Cartão <i class="ti ti-pencil" style="font-size:9px"></i></button>`
+    ?(site?.mp_ativo
+      ?`<button class="btn-card" disabled style="opacity:.5;cursor:default" title="Gerado automaticamente pelo Mercado Pago">Cartão (automático)</button>`
+      :`<button class="btn-card" onclick="toggleCardLink('${g.id}')">Cartão <i class="ti ti-pencil" style="font-size:9px"></i></button>`)
     :`<button class="btn-card" onclick="openCard('${g.id}')">Cartão</button>`;
 
-  // Campo inline do link de cartão (só noiva)
-  const cardLinkField=modoEdicao?`<div class="gift-link-row" id="linkrow-${g.id}" style="display:none">
+  // Campo inline do link de cartão manual (só quando MP não está ativo)
+  const cardLinkField=(modoEdicao&&!site?.mp_ativo)?`<div class="gift-link-row" id="linkrow-${g.id}" style="display:none">
     <label>Link cartão</label>
     <input class="gift-link-edit" id="linkinput-${g.id}" value="${esc(g.card_link||'')}" placeholder="cole o link do MP, PicPay…">
     <button onclick="saveCardLink('${g.id}')" style="background:var(--accent);color:white;border:none;border-radius:2px;padding:5px 10px;font-size:9px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;flex-shrink:0;white-space:nowrap">Salvar</button>
@@ -1445,8 +1494,23 @@ async function saveCardLink(id){
 function isSafeUrl(url){
   try{const u=new URL(url);return u.protocol==='https:'||u.protocol==='http:';}catch(e){return false;}
 }
-function openCard(id){
-  const g=gifts.find(x=>x.id===id);
+async function openCard(id){
+  const g=gifts.find(x=>x.id===id);if(!g)return;
+  if(site?.mp_ativo){
+    // Abre a aba antes do fetch para não ser bloqueada como pop-up
+    const win=window.open('','_blank','noopener,noreferrer');
+    showToast('Gerando link de pagamento...');
+    try{
+      const res=await fetch('/.netlify/functions/create-card-payment',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({slug:site.slug,gift_id:g.id})
+      });
+      const j=await res.json();
+      if(!res.ok||!j.link){if(win)win.close();showToast(j.error||'Erro ao gerar link de pagamento');return;}
+      if(win)win.location.href=j.link;else window.open(j.link,'_blank','noopener,noreferrer');
+    }catch(e){if(win)win.close();showToast('Erro ao gerar link de pagamento');}
+    return;
+  }
   if(!g?.card_link)return showToast('Link de cartão não configurado');
   if(!isSafeUrl(g.card_link))return showToast('Link inválido');
   window.open(g.card_link,'_blank','noopener,noreferrer');
