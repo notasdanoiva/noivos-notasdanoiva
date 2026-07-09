@@ -131,17 +131,21 @@ input,select,textarea,button{font-family:var(--font-b)}
 .gift-img-wrap img{width:100%;height:100%;object-fit:cover;display:none}
 .gift-img-wrap i{font-size:22px;color:var(--border2)}
 .gift-img-wrap.editable{cursor:pointer}
+.gift-img-wrap.editable::after{content:'\270E';position:absolute;bottom:3px;right:3px;width:18px;height:18px;border-radius:50%;background:var(--accent);color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center;pointer-events:none}
 .gift-img-wrap input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
 .gift-info{flex:1;padding:14px 14px 10px;min-width:0}
 .gift-name{font-family:var(--font-d);font-size:17px;font-style:italic;margin-bottom:2px}
 .gift-desc{font-size:11px;color:var(--muted);margin-bottom:6px}
 .gift-value{font-size:13px;font-weight:400;margin-bottom:8px}
-.gift-name-edit{font-family:var(--font-d);font-size:17px;font-style:italic;background:none;border:none;border-bottom:1px solid transparent;width:100%;outline:none;padding:0;transition:border-color .2s;color:var(--text)}
-.gift-name-edit:focus{border-bottom-color:var(--border2)}
-.gift-desc-edit{font-size:11px;color:var(--muted);background:none;border:none;border-bottom:1px solid transparent;width:100%;outline:none;padding:2px 0;margin-bottom:4px;font-weight:300;transition:border-color .2s}
-.gift-desc-edit:focus{border-bottom-color:var(--border2)}
-.gift-val-edit{font-size:13px;font-weight:400;background:none;border:none;border-bottom:1px solid transparent;width:100px;outline:none;padding:2px 0;margin-bottom:6px;transition:border-color .2s}
-.gift-val-edit:focus{border-bottom-color:var(--border2)}
+.gift-name-edit{font-family:var(--font-d);font-size:17px;font-style:italic;background:none;border:none;border-bottom:1px dashed var(--border2);width:100%;outline:none;padding:0;transition:border-color .2s,background .2s;color:var(--text)}
+.gift-name-edit:hover{background:var(--bg2)}
+.gift-name-edit:focus{border-bottom:1px solid var(--accent);background:var(--bg2)}
+.gift-desc-edit{font-size:11px;color:var(--muted);background:none;border:none;border-bottom:1px dashed var(--border2);width:100%;outline:none;padding:2px 0;margin-bottom:4px;font-weight:300;transition:border-color .2s,background .2s}
+.gift-desc-edit:hover{background:var(--bg2)}
+.gift-desc-edit:focus{border-bottom:1px solid var(--accent);background:var(--bg2)}
+.gift-val-edit{font-size:13px;font-weight:400;background:none;border:none;border-bottom:1px dashed var(--border2);width:100px;outline:none;padding:2px 0;margin-bottom:6px;transition:border-color .2s,background .2s}
+.gift-val-edit:hover{background:var(--bg2)}
+.gift-val-edit:focus{border-bottom:1px solid var(--accent);background:var(--bg2)}
 .gift-link-row{display:flex;align-items:center;gap:6px;margin-bottom:8px}
 .gift-link-row label{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--silver);white-space:nowrap}
 .gift-link-edit{flex:1;font-size:11px;color:var(--muted);background:none;border:none;border-bottom:1px solid var(--border);outline:none;padding:2px 0;font-weight:300;min-width:0;transition:border-color .2s}
@@ -1372,7 +1376,7 @@ function giftCardHtml(g){
     <button onclick="saveCardLink('${g.id}')" style="background:var(--accent);color:white;border:none;border-radius:2px;padding:5px 10px;font-size:9px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;flex-shrink:0;white-space:nowrap">Salvar</button>
   </div>`:'';
 
-  return `<div class="gift-card">
+  return `<div class="gift-card" id="giftcard-${g.id}">
     <div class="gift-img-wrap${modoEdicao?' editable':''}" title="${modoEdicao?'Trocar imagem':''}">
       ${imgHtml}${fileHtml}
     </div>
@@ -1417,7 +1421,19 @@ function renderGifts(){
 async function addGift(){
   if(!site?.id){showToast('Salve as configurações primeiro');return;}
   const{data}=await sb.from('gift_list').insert({wedding_site_id:site.id,nome:'Novo presente',descricao:'Descrição',valor:0,ordem:gifts.length}).select().single();
-  if(data){gifts.push(data);renderGifts();}
+  if(!data)return;
+  gifts.push(data);
+  renderGifts();
+  // Abre a lista completa e já foca no presente novo pra ela preencher direto
+  verTodosPresentes();
+  setTimeout(()=>{
+    const card=document.getElementById('giftcard-'+data.id);
+    if(card){
+      card.scrollIntoView({behavior:'smooth',block:'center'});
+      const nameInput=card.querySelector('.gift-name-edit');
+      if(nameInput){nameInput.focus();nameInput.select();}
+    }
+  },200);
 }
 async function upG(id,f,v){await sb.from('gift_list').update({[f]:v}).eq('id',id);const g=gifts.find(x=>x.id===id);if(g)g[f]=v;}
 async function removeGift(id){await sb.from('gift_list').delete().eq('id',id);gifts=gifts.filter(x=>x.id!==id);renderGifts();}
