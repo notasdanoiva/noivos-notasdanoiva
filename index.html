@@ -327,6 +327,11 @@ footer img{width:90px;height:auto;opacity:.35}
 /* Countdown pulso */
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
 .cd-num{display:inline-block}
+
+/* Evita zoom automático do iOS ao focar campos (exige font-size >= 16px) */
+@media (max-width:768px){
+  input,select,textarea{font-size:16px !important}
+}
 </style>
 </head>
 <body>
@@ -476,7 +481,7 @@ footer img{width:90px;height:auto;opacity:.35}
     <div id="listaModal" style="display:none;position:fixed;inset:0;z-index:200;align-items:flex-end">
       <div style="position:absolute;inset:0;background:rgba(0,0,0,.4)" onclick="fecharListaModal()"></div>
       <div style="position:relative;z-index:1;background:white;width:100%;max-height:90vh;overflow-y:auto;border-radius:16px 16px 0 0;padding-bottom:40px">
-        <div style="width:40px;height:4px;background:var(--border2);border-radius:2px;margin:12px auto 20px"></div>
+        <div onclick="fecharListaModal()" style="cursor:pointer;width:40px;height:4px;background:var(--border2);border-radius:2px;margin:12px auto 20px"></div>
         <div style="font-family:var(--font-d);font-size:24px;font-style:italic;font-weight:300;text-align:center;padding:0 24px 16px;border-bottom:1px solid var(--border)">Lista completa</div>
         <div style="padding:16px 24px 0">
           <div id="giftListFull" class="gift-grid-wrap"></div>
@@ -520,7 +525,7 @@ footer img{width:90px;height:auto;opacity:.35}
 <div id="cfgPanel">
   <div class="cfg-overlay" onclick="closeCfg()"></div>
   <div class="cfg-drawer">
-    <div class="cfg-handle"></div>
+    <div class="cfg-handle" onclick="closeCfg()" style="cursor:pointer"></div>
     <div class="cfg-title">Configurar site</div>
     <div class="cfg-section">
       <div class="cfg-section-label">O casal</div>
@@ -658,7 +663,7 @@ footer img{width:90px;height:auto;opacity:.35}
 <div id="rsvpModal">
   <div class="rsvp-overlay" onclick="closeRsvp()"></div>
   <div class="rsvp-drawer">
-    <div class="rsvp-handle"></div>
+    <div class="rsvp-handle" onclick="closeRsvp()" style="cursor:pointer"></div>
     <div class="rsvp-title">Confirmar presença</div>
     <div class="rsvp-sub">Busque pelo nome como está no seu convite</div>
     <div class="rsvp-body">
@@ -673,6 +678,7 @@ footer img{width:90px;height:auto;opacity:.35}
         <button class="btn-back" onclick="goStep(1)"><i class="ti ti-arrow-left" style="font-size:11px"></i> Voltar</button>
         <div class="convite-card">
           <div class="convite-title" id="rsvpConviteName"></div>
+          <div id="rsvpJaRespondeu" style="display:none;font-size:11px;color:var(--silver);background:var(--bg2);border:1px solid var(--border);border-radius:3px;padding:8px 10px;margin-bottom:10px">Você já confirmou esse convite antes. Pode alterar a resposta abaixo se precisar.</div>
           <div id="guestRows"></div>
         </div>
         <button class="btn-confirmar" onclick="confirmarPresenca()">Salvar confirmações</button>
@@ -1655,8 +1661,11 @@ function searchGuests(q){
 function selectConvite(nome){
   const pessoas=guestsList.filter(g=>(g.convite||g.nome)===nome);if(!pessoas.length)return;
   selConvite={nome,pessoas};rsvpSel={};
-  pessoas.forEach(p=>{rsvpSel[p.id]={nome:p.nome,confirmado:null};});
+  pessoas.forEach(p=>{rsvpSel[p.id]={nome:p.nome,confirmado:(p.confirmado===true||p.confirmado===false)?p.confirmado:null};});
   document.getElementById('rsvpConviteName').textContent=nome;
+  const jaRespondeu=pessoas.some(p=>p.confirmado===true||p.confirmado===false);
+  const aviso=document.getElementById('rsvpJaRespondeu');
+  if(aviso)aviso.style.display=jaRespondeu?'block':'none';
   renderGuestRows();goStep(2);
 }
 
