@@ -246,6 +246,8 @@ input,select,textarea,button{font-family:var(--font-b)}
 /* ─── PIX MODAL ─── */
 #pixModal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:300;padding:24px}
 #pixModal.open{display:flex}
+#siteQrModal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:300;padding:24px}
+#siteQrModal.open{display:flex}
 .pix-box{background:white;border-radius:6px;padding:28px 24px;width:100%;max-width:300px;text-align:center}
 .pix-box h3{font-family:var(--font-d);font-size:20px;font-style:italic;margin-bottom:4px}
 .pix-box .sub{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--silver);margin-bottom:20px}
@@ -385,6 +387,7 @@ footer img{width:90px;height:auto;opacity:.35}
     <a onclick="toggleGuestAdmin()">Convidados</a>
     <a onclick="togglePreview()">Visualizar</a>
     <a onclick="copyLink()">Copiar link</a>
+    <a onclick="openSiteQr()">QR Code</a>
   </div>
 
   <!-- PAINEL PERSONALIZAÇÃO -->
@@ -425,6 +428,7 @@ footer img{width:90px;height:auto;opacity:.35}
   <div class="link-box" id="linkBox" style="display:none;margin-top:0;border-radius:0;border-left:none;border-right:none">
     <span class="link-url" id="linkUrl"></span>
     <button class="btn-copy-link" onclick="copyLink()">Copiar</button>
+    <button class="btn-copy-link" onclick="openSiteQr()">QR Code</button>
   </div>
 
   <!-- COUNTDOWN -->
@@ -704,6 +708,17 @@ footer img{width:90px;height:auto;opacity:.35}
     <div class="pix-code" id="pmCode"></div>
     <button class="btn-copy-pix" onclick="doCopyPix()"><i class="ti ti-copy"></i> Copiar código Pix</button>
     <button class="btn-pix-close" onclick="closePix()">Fechar</button>
+  </div>
+</div>
+
+<!-- SITE QR MODAL -->
+<div id="siteQrModal" onclick="closeSiteQrBg(event)">
+  <div class="pix-box">
+    <h3>Seu site</h3>
+    <div class="sub" id="siteQrUrl"></div>
+    <div class="qr-box" style="padding:4px"><div id="siteQrBox"></div></div>
+    <button class="btn-copy-pix" onclick="downloadSiteQr()"><i class="ti ti-download"></i> Baixar QR Code</button>
+    <button class="btn-pix-close" onclick="closeSiteQr()">Fechar</button>
   </div>
 </div>
 
@@ -1182,6 +1197,39 @@ function renderLinkBox(){
 function copyLink(){
   navigator.clipboard.writeText(`https://noivos.notasdanoiva.com/${site?.slug||''}`).catch(()=>{});
   showToast('Link copiado!');
+}
+
+// ═══ QR CODE DO SITE ═══
+function openSiteQr(){
+  if(!site?.slug){showToast('Salve as configurações do site primeiro');return;}
+  const url=`https://noivos.notasdanoiva.com/${site.slug}`;
+  document.getElementById('siteQrUrl').textContent=url;
+  document.getElementById('siteQrModal').classList.add('open');
+  const renderSiteQR=()=>{
+    const box=document.getElementById('siteQrBox');
+    if(!box)return;
+    if(typeof QRCode==='undefined'){setTimeout(renderSiteQR,200);return;}
+    box.innerHTML='';
+    new QRCode(box,{
+      text:url,
+      width:120,
+      height:120,
+      colorDark:'#1A1A1A',
+      colorLight:'#FFFFFF',
+      correctLevel:QRCode.CorrectLevel.M
+    });
+  };
+  setTimeout(renderSiteQR,50);
+}
+function closeSiteQrBg(e){if(e.target.id==='siteQrModal')closeSiteQr();}
+function closeSiteQr(){document.getElementById('siteQrModal').classList.remove('open');}
+function downloadSiteQr(){
+  const canvas=document.querySelector('#siteQrBox canvas');
+  if(!canvas){showToast('Gere o QR code primeiro');return;}
+  const a=document.createElement('a');
+  a.href=canvas.toDataURL('image/png');
+  a.download='qrcode-site-casamento.png';
+  a.click();
 }
 
 // ═══ COUNTDOWN ═══
