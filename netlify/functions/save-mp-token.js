@@ -25,7 +25,7 @@ exports.handler = async (event) => {
 
     // Busca o site desse usuário (só ele pode alterar seu próprio token)
     const siteRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/wedding_sites?user_id=eq.${authUser.id}&select=id`,
+      `${SUPABASE_URL}/rest/v1/wedding_sites?user_id=eq.${encodeURIComponent(authUser.id)}&select=id`,
       { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } }
     );
     const sites = await siteRes.json();
@@ -54,13 +54,13 @@ exports.handler = async (event) => {
         return { statusCode: 500, headers, body: JSON.stringify({ error: 'Erro ao salvar token', detail }) };
       }
     } else {
-      await fetch(`${SUPABASE_URL}/rest/v1/payment_secrets?wedding_site_id=eq.${site.id}`, {
+      await fetch(`${SUPABASE_URL}/rest/v1/payment_secrets?wedding_site_id=eq.${encodeURIComponent(site.id)}`, {
         method: 'DELETE',
         headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` },
       });
     }
 
-    await fetch(`${SUPABASE_URL}/rest/v1/wedding_sites?id=eq.${site.id}`, {
+    await fetch(`${SUPABASE_URL}/rest/v1/wedding_sites?id=eq.${encodeURIComponent(site.id)}`, {
       method: 'PATCH',
       headers: {
         apikey: SERVICE_KEY,

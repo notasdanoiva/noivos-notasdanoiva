@@ -26,14 +26,14 @@ exports.handler = async (event) => {
     if (!site.mp_ativo) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Pagamento com cartão não configurado' }) };
 
     const giftRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/gift_list?id=eq.${gift_id}&wedding_site_id=eq.${site.id}&select=nome,valor`,
+      `${SUPABASE_URL}/rest/v1/gift_list?id=eq.${encodeURIComponent(gift_id)}&wedding_site_id=eq.${encodeURIComponent(site.id)}&select=nome,valor`,
       { headers: sbHeaders }
     );
     const gift = (await giftRes.json())?.[0];
     if (!gift) return { statusCode: 404, headers, body: JSON.stringify({ error: 'Presente não encontrado' }) };
 
     const secretRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/payment_secrets?wedding_site_id=eq.${site.id}&select=mp_access_token`,
+      `${SUPABASE_URL}/rest/v1/payment_secrets?wedding_site_id=eq.${encodeURIComponent(site.id)}&select=mp_access_token`,
       { headers: sbHeaders }
     );
     const secret = (await secretRes.json())?.[0];
@@ -57,6 +57,14 @@ exports.handler = async (event) => {
         },
         auto_return: 'approved',
         statement_descriptor: descritor,
+        // Só cartão aqui — Pix já tem fluxo próprio no site (sem taxa) e boleto não faz sentido pra presente
+        payment_methods: {
+          excluded_payment_types: [
+            { id: 'ticket' },        // boleto
+            { id: 'bank_transfer' }, // Pix
+            { id: 'atm' },
+          ],
+        },
       }),
     });
 

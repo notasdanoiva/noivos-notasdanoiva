@@ -16,7 +16,7 @@ const sbHeaders = {
 
 async function fetchAppState(pro_key) {
   const res = await fetch(
-    `${APP_PRO_URL}/rest/v1/app_data?user_id=eq.${pro_key}&select=data`,
+    `${APP_PRO_URL}/rest/v1/app_data?user_id=eq.${encodeURIComponent(pro_key)}&select=data`,
     { headers: sbHeaders }
   );
   const rows = await res.json();
@@ -91,7 +91,7 @@ exports.handler = async (event) => {
         }
       });
 
-      await fetch(`${APP_PRO_URL}/rest/v1/app_data?user_id=eq.${pro_key}`, {
+      await fetch(`${APP_PRO_URL}/rest/v1/app_data?user_id=eq.${encodeURIComponent(pro_key)}`, {
         method: 'PATCH',
         headers: {
           ...sbHeaders,
