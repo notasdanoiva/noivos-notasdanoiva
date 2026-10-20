@@ -775,14 +775,7 @@ const DEFAULT_GIFTS=[
 const APP_URL  = 'https://dfyqmhwfhbzazfhyhjia.supabase.co';
 const APP_ANON = 'sb_publishable_2NM1eHWJ3SH0UPa-0ZQWyg_7XXhPW9A';
 
-function checkAcessoPro(proKey){
-  // Se o servidor do app não responder, libera o site em vez de ficar travado no carregamento
-  return Promise.race([
-    _checkAcessoProReal(proKey),
-    new Promise(r=>setTimeout(()=>r('ok'),4000))
-  ]);
-}
-async function _checkAcessoProReal(proKey){
+async function checkAcessoPro(proKey){
   // Retorna: 'ok' | 'trial_ativo' | 'expirado' | 'invalido'
   if(!proKey) return 'invalido';
   try {
