@@ -1890,7 +1890,7 @@ async function confirmarPresenca(){
     try{
       for(const [token,info] of Object.entries(porToken)){
         const statuses=Array.from({length:info.total},(_,i)=>info.st[i]||null);
-        const res=await fetch(NOVO_URL+'/.netlify/functions/confirm-rsvp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,statuses})});
+        const res=await fetch(NOVO_URL+'/.netlify/functions/confirm-rsvp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,statuses,origem:'site'})});
         if(!res.ok)throw new Error('falha');
       }
     }catch(e){showToast('Não conseguimos registrar sua resposta. Tente novamente em instantes.');return;}
