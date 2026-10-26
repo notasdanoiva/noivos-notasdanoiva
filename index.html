@@ -361,7 +361,8 @@ footer img{width:90px;height:auto;opacity:.35}
         🌸 O site de casamento é exclusivo para clientes do <strong>Noiva Independente Pro</strong>.<br>
         Para criar seu site, você precisa da sua <strong>chave de acesso</strong>:<br>
         <span style="background:#EDE9F6;border-radius:3px;padding:2px 7px;display:inline-block;margin-top:4px">
-          📱 No app → toque no botão <strong>Chave</strong> (rodapé da tela) → <strong>Copiar</strong> → cole abaixo
+          📱 No app → <strong>Configurações → Chave de integração</strong> → <strong>Copiar chave</strong> → cole abaixo<br>
+          <span style="font-size:10px;opacity:.8">(no app antigo: botão <strong>Chave</strong>, no rodapé da tela)</span>
         </span>
       </div>
       <div class="auth-form-group">
@@ -775,6 +776,56 @@ const DEFAULT_GIFTS=[
 const APP_URL  = 'https://dfyqmhwfhbzazfhyhjia.supabase.co';
 const APP_ANON = 'sb_publishable_2NM1eHWJ3SH0UPa-0ZQWyg_7XXhPW9A';
 
+// ═══ APP NOVO (Noiva Independente) ═══════════════════
+// A noiva do app novo cola a mesma "chave" (id da conta). O site confere nesse app por uma função do
+// servidor dele (devolve só ok/expirado/invalido) e lê os convites da tabela pública "confirmacoes".
+const NOVO_URL  = 'https://noivaindependente.notasdanoiva.com';
+const NOVO_SB   = 'https://bsfskirzujcsnxqrlung.supabase.co';
+const NOVO_ANON = 'sb_publishable_z4eDRwKJiNPSfNxq_fKfPQ_wiMSHAxv';
+let _sbNovo = null;
+function sbNovo(){ return _sbNovo || (_sbNovo = supabase.createClient(NOVO_SB, NOVO_ANON)); }
+
+// Retorna 'ok' | 'expirado' | 'invalido', ou null se o app novo não respondeu
+async function statusChaveNovo(chave){
+  try{
+    const res = await fetch(NOVO_URL + '/.netlify/functions/validar-chave', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({key: chave})
+    });
+    if(!res.ok) return null;
+    const j = await res.json();
+    return j && j.status ? j.status : null;
+  }catch(e){ return null; }
+}
+
+// Convites do app novo, no mesmo formato da lista do app antigo. Cada pessoa leva o token do convite
+// e a posição dela, pra resposta voltar pela mesma função de confirmação do app.
+async function carregarConvidadosNovo(proKey){
+  try{
+    const {data, error} = await sbNovo().from('confirmacoes')
+      .select('token, invite_id, invite_data')
+      .eq('user_id', proKey)
+      .order('created_at', {ascending:false});
+    if(error || !data || !data.length) return null;
+    const vistos = new Set(), lista = [];
+    data.forEach(row=>{
+      if(vistos.has(String(row.invite_id))) return;
+      vistos.add(String(row.invite_id));
+      const inv = row.invite_data || {};
+      (inv.pessoas||[]).forEach((p,i)=>{
+        lista.push({
+          id: row.token + '__' + i,
+          nome: p.nome,
+          convite: inv.nome || p.nome,
+          invite_id: row.invite_id,
+          confirmado: p.status === 'Confirmado' ? true : p.status === 'Não vai' ? false : null,
+          _novo: {token: row.token, idx: i}
+        });
+      });
+    });
+    return lista.length ? lista : null;
+  }catch(e){ return null; }
+}
+
 function checkAcessoPro(proKey){
   // Se o servidor do app não responder, libera o site em vez de ficar travado no carregamento
   return Promise.race([
@@ -785,6 +836,9 @@ function checkAcessoPro(proKey){
 async function _checkAcessoProReal(proKey){
   // Retorna: 'ok' | 'trial_ativo' | 'expirado' | 'invalido'
   if(!proKey) return 'invalido';
+  // Chave do app novo? (se ele não responder ou não conhecer a chave, segue pro app antigo)
+  const novo = await statusChaveNovo(proKey);
+  if(novo === 'ok' || novo === 'expirado') return novo;
   try {
     const sbApp = supabase.createClient(APP_URL, APP_ANON);
 
@@ -938,6 +992,16 @@ async function doCadastro(){
   btnCad.disabled = true;
 
   try {
+    // 1º: chave do app novo (confere por uma função do servidor dele)
+    const statusNovo = await statusChaveNovo(chave);
+    if(statusNovo === 'expirado'){
+      showAuthErr('Sua conta Pro expirou. Renove o acesso no app para criar seu site.');
+      btnCad.textContent = 'Criar meu site'; btnCad.disabled = false;
+      return;
+    }
+
+    // 2º: se não for do app novo, confere no app antigo (como antes)
+    if(statusNovo !== 'ok'){
     const APP_URL  = 'https://dfyqmhwfhbzazfhyhjia.supabase.co';
     const APP_ANON = 'sb_publishable_2NM1eHWJ3SH0UPa-0ZQWyg_7XXhPW9A';
     const sbApp = supabase.createClient(APP_URL, APP_ANON);
@@ -950,7 +1014,7 @@ async function doCadastro(){
       .single();
 
     if(profErr || !profile){
-      showAuthErr('Chave inválida. Verifique no app em Configurações → Integração.');
+      showAuthErr('Chave inválida. Verifique no app em Configurações → Chave de integração.');
       btnCad.textContent = 'Criar meu site'; btnCad.disabled = false;
       return;
     }
@@ -979,6 +1043,7 @@ async function doCadastro(){
       }
     }
     // Sem registro em trials = pagante ✅ — pode prosseguir
+    }
 
     // Verifica se essa chave já foi usada pra criar um site
     const { data: siteExist } = await sb
@@ -1614,6 +1679,8 @@ function toggleGuestAdmin(){
 async function loadConvidados(){
   if(!site?.id)return;
   if(site.pro_integration_key){
+    const novos=await carregarConvidadosNovo(site.pro_integration_key);
+    if(novos){guestsList=novos;renderConvidadosPro();return;}
     try{
       const res=await fetch('/.netlify/functions/rsvp-sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'get_guests',pro_key:site.pro_integration_key})});
       const data=await res.json();
@@ -1685,6 +1752,8 @@ function closeRsvp(){document.getElementById('rsvpModal').classList.remove('open
 async function loadGuestsForRsvp(){
   if(!site?.id)return;
   if(site.pro_integration_key){
+    const novos=await carregarConvidadosNovo(site.pro_integration_key);
+    if(novos){guestsList=novos;return;}
     try{
       const res=await fetch('/.netlify/functions/rsvp-sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'get_guests',pro_key:site.pro_integration_key})});
       const data=await res.json();
@@ -1738,10 +1807,28 @@ function togGuest(id,val){rsvpSel[id].confirmado=rsvpSel[id].confirmado===val?nu
 
 async function confirmarPresenca(){
   if(Object.values(rsvpSel).some(g=>g.confirmado===null)){showToast('Confirme a presença de cada pessoa');return;}
-  const rows=Object.entries(rsvpSel).map(([guest_id,g])=>({wedding_site_id:site.id,guest_id,nome:g.nome,confirmado:g.confirmado}));
-  await sb.from('rsvp_responses').upsert(rows,{onConflict:'guest_id'});
-  if(site.pro_integration_key){
-    try{await fetch('/.netlify/functions/rsvp-sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'sync_rsvp',pro_key:site.pro_integration_key,responses:rows})});}catch(e){}
+  const doNovo=Object.keys(rsvpSel).map(id=>guestsList.find(x=>String(x.id)===String(id))).filter(g=>g&&g._novo);
+  if(doNovo.length){
+    // App novo: a resposta vai pela função de confirmação do app (grava no registro do convite e a lista da noiva se atualiza)
+    const porToken={};
+    doNovo.forEach(g=>{
+      const t=g._novo.token;
+      if(!porToken[t])porToken[t]={total:guestsList.filter(x=>x._novo&&x._novo.token===t).length,st:{}};
+      porToken[t].st[g._novo.idx]=rsvpSel[g.id].confirmado?'Confirmado':'Não vai';
+    });
+    try{
+      for(const [token,info] of Object.entries(porToken)){
+        const statuses=Array.from({length:info.total},(_,i)=>info.st[i]||null);
+        const res=await fetch(NOVO_URL+'/.netlify/functions/confirm-rsvp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,statuses})});
+        if(!res.ok)throw new Error('falha');
+      }
+    }catch(e){showToast('Não conseguimos registrar sua resposta. Tente novamente em instantes.');return;}
+  }else{
+    const rows=Object.entries(rsvpSel).map(([guest_id,g])=>({wedding_site_id:site.id,guest_id,nome:g.nome,confirmado:g.confirmado}));
+    await sb.from('rsvp_responses').upsert(rows,{onConflict:'guest_id'});
+    if(site.pro_integration_key){
+      try{await fetch('/.netlify/functions/rsvp-sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'sync_rsvp',pro_key:site.pro_integration_key,responses:rows})});}catch(e){}
+    }
   }
   document.getElementById('successList').innerHTML=Object.values(rsvpSel).map(g=>`
     <div class="success-row"><span>${g.nome}</span><span class="${g.confirmado?'s-sim':'s-nao'}">${g.confirmado?'Confirmado':'Não irá'}</span></div>`).join('');
