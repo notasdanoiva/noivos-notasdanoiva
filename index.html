@@ -59,6 +59,7 @@ input,select,textarea,button{font-family:var(--font-b)}
 .auth-info strong{color:#1A1A1A;font-weight:500}
 .auth-info-passo{display:block;background:#EEEEEE;padding:7px 10px;margin-top:8px;color:#1A1A1A}
 .auth-info-passo small{display:block;margin-top:3px;font-size:11px;color:#767676}
+.auth-ok{display:none;background:#F3F8F3;border:1px solid #CFE3CF;color:#3F6B3F;padding:10px 12px;margin-bottom:16px;font-size:12px;line-height:1.6;text-align:left}
 .auth-notas{margin-top:26px}
 .auth-notas img{max-width:150px;width:100%;height:auto;display:block;margin:0 auto}
 @media (max-width:420px){#authScreen{padding:16px}.auth-box{padding:30px 20px}.auth-form-group input{font-size:16px}}
@@ -360,6 +361,7 @@ footer img{width:90px;height:auto;opacity:.35}
       <button class="btn-auth" onclick="doLogin()">Entrar</button>
     </div>
     <div id="formCad" style="display:none">
+      <div class="auth-ok" id="authPrefillMsg">Sua chave e os dados do casamento vieram do app. Falta só criar o e-mail e a senha do site.</div>
       <div class="auth-info">
         O site de casamento é exclusivo para clientes do <strong>Noiva Independente</strong>.<br>
         Para criar seu site, você precisa da sua <strong>chave de acesso</strong>:
@@ -738,6 +740,70 @@ const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 let user=null,site=null,isNoiva=false,modoEdicao=false,slug=null,gifts=[],guestsList=[],rsvpSel={},selConvite=null;
 let _proKeyPendente=null; // chave pro usada no cadastro, salva no primeiro site criado
 
+// Dados vindos do botão "Criar meu site dos noivos" do app (chegam no # do endereço e são apagados dele).
+// Só preenchem formulários; nada é gravado até a noiva conferir e salvar.
+let _appPrefill=null;
+(function lerPrefillDoApp(){
+  try{
+    const limpa=v=>String(v||'').replace(/[\u0000-\u001f<>]/g,'').trim().slice(0,120);
+    const h=(location.hash||'').replace(/^#/,'');
+    if(/(^|&)chave=/.test(h)){
+      const p=new URLSearchParams(h);
+      const chave=limpa(p.get('chave'));
+      if(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(chave)){
+        const data=limpa(p.get('data'));
+        _appPrefill={chave,noiva:limpa(p.get('noiva')),noivo:limpa(p.get('noivo')),
+          data:/^\d{4}-\d{2}-\d{2}$/.test(data)?data:'',hora:limpa(p.get('hora')),
+          cerimonia:limpa(p.get('cerimonia')),recepcao:limpa(p.get('recepcao'))};
+        try{sessionStorage.setItem('appPrefill',JSON.stringify(_appPrefill));}catch(e){}
+      }
+      history.replaceState(null,'',location.pathname+location.search);
+    }else{
+      try{const j=sessionStorage.getItem('appPrefill');if(j)_appPrefill=JSON.parse(j);}catch(e){}
+    }
+  }catch(e){}
+})();
+function limparPrefillDoApp(){_appPrefill=null;try{sessionStorage.removeItem('appPrefill');}catch(e){}}
+
+// "duda-e-rafael"; se já existir, tenta "-2", "-3"...
+function slugBase(t){return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().split(/\s+/)[0].replace(/[^a-z0-9]/g,'');}
+async function slugLivre(noiva,noivo){
+  const a=slugBase(noiva),b=slugBase(noivo);
+  if(!a||!b)return '';
+  const base=a+'-e-'+b;
+  for(let i=1;i<=6;i++){
+    const sl=i===1?base:base+'-'+i;
+    try{
+      const{data,error}=await sb.from('wedding_sites').select('id').eq('slug',sl).maybeSingle();
+      if(error)return base;
+      if(!data)return sl;
+    }catch(e){return base;}
+  }
+  return base+'-'+Date.now().toString(36).slice(-3);
+}
+
+// Preenche a configuração de um site NOVO com o que o app já sabe. Não mexe no que já estiver escrito.
+async function preencherDoApp(){
+  const p=_appPrefill;
+  if(!p||site)return;
+  const f=(id,v)=>{const el=document.getElementById(id);if(el&&v&&!el.value)el.value=v;};
+  f('cfgNoiva',p.noiva);f('cfgNoivo',p.noivo);
+  f('cfgCerimData',p.data);f('cfgRecepData',p.data);
+  f('cfgCerimH',p.hora);
+  f('cfgCerimLocal',p.cerimonia);f('cfgRecepLocal',p.recepcao);
+  const el=document.getElementById('cfgSlug');
+  if(el&&!el.value)el.value=await slugLivre(p.noiva,p.noivo);
+  showToast('Preenchemos com os dados do app. Confira, ajuste o que quiser e salve.');
+}
+function aplicarPrefillCadastro(){
+  if(!_appPrefill)return;
+  switchTab('cad');
+  const set=(id,v)=>{const el=document.getElementById(id);if(el&&v&&!el.value)el.value=v;};
+  set('cadChavePro',_appPrefill.chave);set('cadNome',_appPrefill.noiva);
+  const msg=document.getElementById('authPrefillMsg');if(msg)msg.style.display='block';
+  const info=document.querySelector('#formCad .auth-info');if(info)info.style.display='none';
+}
+
 const DEFAULT_GIFTS=[
   // Casa & Cozinha
   {nome:'Jogo de panelas',descricao:'Tramontina inox 5 peças com tampas',valor:350,imagem_url:'https://yqjgdbbapgsehakspuuh.supabase.co/storage/v1/object/public/gifts/panelas.png',card_link:'',ordem:0},
@@ -930,7 +996,7 @@ async function loadBySlug(s){
 
 async function loadByUser(){
   const{data}=await sb.from('wedding_sites').select('*').eq('user_id',user.id).single();
-  site=data||null; isNoiva=true; if(site)slug=site.slug;
+  site=data||null; isNoiva=true; if(site){slug=site.slug;limparPrefillDoApp();}
 
   // Verifica status pro e guarda para mostrar aviso se trial
   if(site?.pro_integration_key){
@@ -946,17 +1012,19 @@ async function loadByUser(){
   }
 
   renderApp();
-  if(!site && _proKeyPendente){
+  if(!site && (_proKeyPendente || _appPrefill)){
     setTimeout(()=>{
       openCfg();
       const el=document.getElementById('cfgProKey');
-      if(el && !el.value) el.value=_proKeyPendente;
+      if(el && !el.value) el.value=_proKeyPendente || (_appPrefill && _appPrefill.chave) || '';
+      preencherDoApp();
     }, 400);
   }
 }
 function showAuth(){
   document.getElementById('loading').style.display='none';
   document.getElementById('authScreen').style.display='flex';
+  if(_appPrefill)aplicarPrefillCadastro();
 }
 
 // ═══ AUTH ═══
@@ -1384,7 +1452,7 @@ async function salvarConfig(){
   if(site?.id)result=await sb.from('wedding_sites').update(payload).eq('id',site.id).select().single();
   else result=await sb.from('wedding_sites').insert(payload).select().single();
   if(result.error){showToast('Erro: '+result.error.message);return;}
-  site=result.data;slug=site.slug;
+  site=result.data;slug=site.slug;limparPrefillDoApp();
   const mpTokenVal=document.getElementById('cfgMPToken').value.trim();
   if(mpTokenVal)await salvarMPToken(mpTokenVal);
   renderHero();renderEventos();renderLinkBox();startCountdown();
