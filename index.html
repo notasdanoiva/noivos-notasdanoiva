@@ -39,25 +39,29 @@ input,select,textarea,button{font-family:var(--font-b)}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* ─── AUTH ─── */
-#authScreen{display:none;min-height:100vh;align-items:center;justify-content:center;padding:24px;background:linear-gradient(160deg,#F6F4F9 0%,#EDEAF4 50%,#F6F4F9 100%);position:relative;overflow:hidden}
-#authScreen::before{content:'';position:absolute;width:300px;height:300px;background:radial-gradient(circle,rgba(160,120,200,.1) 0%,transparent 70%);top:-60px;right:-60px;pointer-events:none}
-.auth-box{width:100%;max-width:340px;text-align:center;background:rgba(255,255,255,.88);backdrop-filter:blur(16px);border:1px solid rgba(226,222,235,.8);border-radius:8px;padding:40px 32px;box-shadow:0 8px 40px rgba(61,50,84,.07)}
-.auth-logo{width:120px;height:auto;margin:0 auto 8px;display:block}
-.auth-brand{font-family:var(--font-d);font-size:22px;font-style:italic;color:#3D3254;margin-bottom:4px;display:none}
-.auth-sub{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#9B93B0;margin-bottom:24px}
-.auth-divider{display:flex;align-items:center;gap:10px;margin-bottom:20px}
-.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:#E2DEEB}
-.auth-divider span{font-size:13px;color:#C4BADB}
-.auth-tabs{display:flex;border:1px solid #E2DEEB;border-radius:3px;overflow:hidden;margin-bottom:22px}
-.auth-tab{flex:1;padding:10px;font-size:10px;letter-spacing:.15em;text-transform:uppercase;background:none;border:none;cursor:pointer;color:#9B93B0;transition:all .2s}
-.auth-tab.active{background:#5C4F7A;color:white}
-.auth-form-group{margin-bottom:12px;text-align:left}
-.auth-form-group label{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#9B93B0;display:block;margin-bottom:5px}
-.auth-form-group input{width:100%;border:1px solid #E2DEEB;border-radius:3px;padding:11px 13px;font-size:13px;font-weight:300;outline:none;transition:border-color .2s;background:rgba(255,255,255,.9);color:#3D3254}
-.auth-form-group input:focus{border-color:#A090C0}
-.btn-auth{width:100%;background:#5C4F7A;color:white;border:none;border-radius:3px;padding:13px;font-size:10px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px rgba(92,79,122,.2)}
-.btn-auth:hover{background:#4A3D65}
-.auth-error{font-size:12px;color:#C84040;margin-top:10px;display:none;text-align:center;padding:8px 12px;background:#FFF0F0;border-radius:3px;border:1px solid #FFCCCC}
+#authScreen{display:none;min-height:100vh;align-items:center;justify-content:center;padding:24px;background:#FFFFFF}
+.auth-box{width:100%;max-width:380px;text-align:center;background:#fff;border-radius:0;padding:36px 28px;box-shadow:0 8px 40px rgba(0,0,0,.15)}
+.auth-logo{width:84px;max-width:100%;height:auto;margin:0 auto 10px;display:block}
+.auth-brand{font-family:var(--font-b);font-size:20px;font-weight:400;color:#1A1A1A;margin-bottom:4px;display:none}
+.auth-sub{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#767676;margin-bottom:22px}
+.auth-tabs{display:flex;border-bottom:2px solid #E4E4E4;margin-bottom:20px}
+.auth-tab{flex:1;padding:8px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:400;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;color:#B0B0B0;transition:all .2s}
+.auth-tab.active{color:#1A1A1A;border-bottom-color:#1A1A1A}
+.auth-form-group{margin-bottom:14px;text-align:left}
+.auth-form-group label{font-size:11px;letter-spacing:.2em;text-transform:uppercase;font-weight:400;color:#767676;display:block;margin-bottom:5px}
+.auth-form-group input{width:100%;border:1.5px solid #E4E4E4;border-radius:0;padding:11px 14px;font-size:14px;font-weight:300;outline:none;transition:border-color .2s;background:#fff;color:#1A1A1A}
+.auth-form-group input:focus{border-color:#1A1A1A}
+.btn-auth{width:100%;background:#1A1A1A;color:#fff;border:none;border-radius:0;padding:16px;font-size:13px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;margin-top:4px;transition:opacity .2s}
+.btn-auth:hover{opacity:.88}
+.btn-auth:disabled{opacity:.5;cursor:not-allowed}
+.auth-error{font-size:12px;color:#8E3F3F;margin-top:10px;display:none;text-align:center;padding:8px 12px;background:#FBF3F3;border-radius:0;border:1px solid #E8CFCF}
+.auth-info{background:#F8F8F8;border:1px solid #E4E4E4;padding:12px 14px;margin-bottom:16px;font-size:12px;color:#767676;line-height:1.7;text-align:left}
+.auth-info strong{color:#1A1A1A;font-weight:500}
+.auth-info-passo{display:block;background:#EEEEEE;padding:7px 10px;margin-top:8px;color:#1A1A1A}
+.auth-info-passo small{display:block;margin-top:3px;font-size:11px;color:#767676}
+.auth-notas{margin-top:26px}
+.auth-notas img{max-width:150px;width:100%;height:auto;display:block;margin:0 auto}
+@media (max-width:420px){#authScreen{padding:16px}.auth-box{padding:30px 20px}.auth-form-group input{font-size:16px}}
 
 /* ─── BARRA NOIVA ─── */
 #noivaBadge{display:none;background:var(--text);color:white;text-align:center;padding:10px;font-size:9px;letter-spacing:.2em;text-transform:uppercase;position:sticky;top:0;z-index:100}
@@ -343,10 +347,9 @@ footer img{width:90px;height:auto;opacity:.35}
 <!-- AUTH -->
 <div id="authScreen">
   <div class="auth-box">
-    <img src="logo.png" class="auth-logo" alt="Notas da Noiva" onerror="this.style.display='none';document.getElementById('authBrand').style.display='block'">
+    <img src="logo-nn.png" class="auth-logo" alt="Notas da Noiva" onerror="this.style.display='none';document.getElementById('authBrand').style.display='block'">
     <div class="auth-brand" id="authBrand">Notas da Noiva</div>
     <div class="auth-sub">Site do casal</div>
-    <div class="auth-divider"><span>✦</span></div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchTab('login')">Entrar</button>
       <button class="auth-tab" id="tabCad" onclick="switchTab('cad')">Criar conta</button>
@@ -357,12 +360,11 @@ footer img{width:90px;height:auto;opacity:.35}
       <button class="btn-auth" onclick="doLogin()">Entrar</button>
     </div>
     <div id="formCad" style="display:none">
-      <div style="background:#F6F4F9;border:1px solid #E2DEEB;border-radius:3px;padding:12px 14px;margin-bottom:14px;font-size:11px;color:#6B5F8A;line-height:1.8">
-        🌸 O site de casamento é exclusivo para clientes do <strong>Noiva Independente Pro</strong>.<br>
-        Para criar seu site, você precisa da sua <strong>chave de acesso</strong>:<br>
-        <span style="background:#EDE9F6;border-radius:3px;padding:2px 7px;display:inline-block;margin-top:4px">
-          📱 No app → <strong>Configurações → Chave de integração</strong> → <strong>Copiar chave</strong> → cole abaixo<br>
-          <span style="font-size:10px;opacity:.8">(no app antigo: botão <strong>Chave</strong>, no rodapé da tela)</span>
+      <div class="auth-info">
+        O site de casamento é exclusivo para clientes do <strong>Noiva Independente</strong>.<br>
+        Para criar seu site, você precisa da sua <strong>chave de acesso</strong>:
+        <span class="auth-info-passo"><i class="ti ti-key"></i> No app: <strong>Configurações → Chave de integração</strong> → <strong>Copiar chave</strong> → cole abaixo
+          <small>(no app antigo: botão <strong>Chave</strong>, no rodapé da tela)</small>
         </span>
       </div>
       <div class="auth-form-group">
@@ -375,6 +377,7 @@ footer img{width:90px;height:auto;opacity:.35}
       <button class="btn-auth" onclick="doCadastro()">Criar meu site</button>
     </div>
     <div class="auth-error" id="authError"></div>
+    <div class="auth-notas"><img src="notas-da-noiva.png" alt="Notas da Noiva"></div>
   </div>
 </div>
 
@@ -869,24 +872,24 @@ async function _checkAcessoProReal(proKey){
 
 function showSiteBloqueado(noiva, noivo){
   const nomes = [noiva, noivo].filter(Boolean).join(' & ') || 'Este site';
+  const seguro = String(nomes).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   document.getElementById('loading').style.display = 'none';
   document.body.innerHTML = `
     <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;
-      background:linear-gradient(135deg,#f9f5f0 0%,#f0eaf5 100%);
-      font-family:'Jost',sans-serif;padding:40px 24px;text-align:center">
-      <div style="max-width:420px">
-        <div style="font-size:48px;margin-bottom:16px">🌸</div>
-        <h2 style="font-family:'Cormorant Garamond',serif;font-size:28px;color:#4a3f6b;
-          font-weight:400;margin:0 0 12px">${nomes}</h2>
-        <p style="color:#9b8baa;font-size:14px;line-height:1.8;margin:0 0 28px">
+      background:#FFFFFF;font-family:'Jost',sans-serif;padding:24px;text-align:center">
+      <div style="max-width:380px;width:100%;padding:36px 28px;box-shadow:0 8px 40px rgba(0,0,0,.15)">
+        <img src="logo-nn.png" alt="Notas da Noiva"
+          style="width:76px;max-width:100%;height:auto;display:block;margin:0 auto 18px">
+        <h2 style="font-family:'Jost',sans-serif;font-size:22px;color:#1A1A1A;
+          font-weight:400;letter-spacing:.04em;margin:0 0 12px">${seguro}</h2>
+        <p style="color:#767676;font-size:14px;line-height:1.8;margin:0 0 28px;font-weight:300">
           Este site está temporariamente indisponível.<br>
           Para reativá-lo, renove seu acesso ao<br>
-          <strong style="color:#6b5f8a">Noiva Independente Pro</strong>.
+          <strong style="color:#1A1A1A;font-weight:500">Noiva Independente</strong>.
         </p>
-        <a href="https://noivaindesependente.com.br" 
-          style="display:inline-block;background:#6b5f8a;color:#fff;
-          padding:12px 32px;border-radius:4px;text-decoration:none;
-          font-size:13px;letter-spacing:.08em;text-transform:uppercase">
+        <a href="https://noivaindependente.notasdanoiva.com"
+          style="display:block;background:#1A1A1A;color:#fff;padding:16px;border-radius:0;
+          text-decoration:none;font-size:13px;font-weight:500;letter-spacing:.14em;text-transform:uppercase">
           Renovar acesso
         </a>
       </div>
@@ -1116,7 +1119,7 @@ function renderApp(){
   if(isNoiva && window._proStatus && window._proStatus !== 'ok'){
     const cor = window._proStatus === 'expirado' ? '#C0503A' : '#E67E22';
     const msg = window._proStatus === 'expirado'
-      ? '⚠️ Seu acesso Pro expirou. Seu site está invisível para os convidados. <a href="https://noivaindesependente.com.br" style="color:#fff;font-weight:700;text-decoration:underline">Renovar agora</a>'
+      ? '⚠️ Seu acesso ao Noiva Independente expirou. Seu site está invisível para os convidados. <a href="https://noivaindependente.notasdanoiva.com" style="color:#fff;font-weight:700;text-decoration:underline">Renovar agora</a>'
       : '⏳ Você está no período de avaliação. Seu site fica ativo enquanto o trial estiver ativo.';
     const banner = document.createElement('div');
     banner.innerHTML = msg;
