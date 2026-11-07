@@ -1731,10 +1731,35 @@ function closePixBg(e){if(e.target.id==='pixModal')closePix();}
 function closePix(){document.getElementById('pixModal').classList.remove('open');}
 function doCopyPix(){navigator.clipboard.writeText(document.getElementById('pmCode').textContent).catch(()=>{});showToast('Código copiado!');}
 
+function normalizaChavePix(chave){
+  let k=String(chave||'').trim();
+  if(k.includes('@')) return k.toLowerCase();
+  if(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(k)) return k.toLowerCase();
+  if(/^[\d.\-\/() +]+$/.test(k)){
+    const d=k.replace(/\D/g,'');
+    const cpfValido=v=>{
+      if(!/^\d{11}$/.test(v)||/^(\d)\1+$/.test(v))return false;
+      for(const n of [9,10]){let s=0;for(let i=0;i<n;i++)s+=+v[i]*(n+1-i);if((s*10)%11%10!==+v[n])return false;}
+      return true;
+    };
+    const comoTelefone=()=>'+'+(d.startsWith('55')&&d.length>=12?d:'55'+d);
+    if(k.startsWith('+')||k.includes('(')) return comoTelefone();
+    if(d.length===14) return d;
+    if(d.length===11) return cpfValido(d)?d:comoTelefone();
+    if(d.length===10||((d.length===12||d.length===13)&&d.startsWith('55'))) return comoTelefone();
+    return d;
+  }
+  return k;
+}
+function textoPix(s,max,fallback){
+  const t=String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9 ]/g,' ').replace(/\s+/g,' ').trim().toUpperCase().substring(0,max).trim();
+  return t||fallback;
+}
 function gerarPix(chave,nome,cidade,valor){
   function c(id,v){return id+v.length.toString().padStart(2,'0')+v;}
-  const mai=c('00','BR.GOV.BCB.PIX')+c('01',chave);
-  const payload='000201'+c('26',mai)+'52040000'+'5303986'+c('54',valor.toFixed(2))+'5802BR'+c('59',nome.substring(0,25).toUpperCase())+c('60',cidade.substring(0,15).toUpperCase())+c('62',c('05','***'))+'6304';
+  const mai=c('00','BR.GOV.BCB.PIX')+c('01',normalizaChavePix(chave));
+  const campoValor=Number(valor)>0?c('54',Number(valor).toFixed(2)):'';
+  const payload='000201'+c('26',mai)+'52040000'+'5303986'+campoValor+'5802BR'+c('59',textoPix(nome,25,'NOIVA'))+c('60',textoPix(cidade,15,'BRASIL'))+c('62',c('05','***'))+'6304';
   let crc=0xFFFF;
   for(let i=0;i<payload.length;i++){crc^=payload.charCodeAt(i)<<8;for(let j=0;j<8;j++)crc=(crc&0x8000)?(crc<<1)^0x1021:crc<<1;}
   return payload+(crc&0xFFFF).toString(16).toUpperCase().padStart(4,'0');
